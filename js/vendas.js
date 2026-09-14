@@ -289,7 +289,7 @@ export async function limparTodoHistoricoVendas() {
     confirmou = await pedirConfirmacao({
       titulo: 'Limpar Todo Histórico?',
       mensagem: `Deseja excluir todas as ${state.vendas.length} vendas registradas? O estoque correspondente de cada item será restaurado.`,
-      textoConfirmar: 'Sim, Limpar Todas as Vendas',
+      textoConfirmar: 'Sim, limpar',
       perigo: true
     });
   } catch (err) {

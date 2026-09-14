@@ -272,18 +272,21 @@
 /* Confirmation Modal Buttons */
 .btn-danger {
   flex: 1;
-  height: 44px;
+  min-height: 40px;
+  height: 40px;
+  padding: 0 12px;
   background: #dc2626;
   color: #fff;
   border: none;
-  border-radius: 12px;
-  font-size: 14px;
+  border-radius: 10px;
+  font-size: 13px;
   font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
   cursor: pointer;
+  white-space: nowrap;
   transition: opacity 0.15s;
 }
 
@@ -293,17 +296,20 @@
 
 .btn-cancel {
   flex: 1;
-  height: 44px;
+  min-height: 40px;
+  height: 40px;
+  padding: 0 12px;
   background: var(--surface-card);
   border: 1px solid var(--border);
   color: var(--text-muted);
-  border-radius: 12px;
-  font-size: 14px;
+  border-radius: 10px;
+  font-size: 13px;
   font-weight: 600;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .btn-cancel:active {

@@ -28,16 +28,18 @@ document.addEventListener('DOMContentLoaded', () => {
     e.preventDefault();
     deferredInstallPrompt = e;
     const btnInstall = document.getElementById('btnInstalarApp');
-    if (btnInstall) {
-      btnInstall.style.display = 'flex';
-      refreshIcons();
-    }
+    const btnInstallModal = document.getElementById('btnInstalarAppModal');
+    if (btnInstall) btnInstall.style.display = 'flex';
+    if (btnInstallModal) btnInstallModal.style.display = 'flex';
+    refreshIcons();
   });
 
   window.addEventListener('appinstalled', () => {
     deferredInstallPrompt = null;
     const btnInstall = document.getElementById('btnInstalarApp');
+    const btnInstallModal = document.getElementById('btnInstalarAppModal');
     if (btnInstall) btnInstall.style.display = 'none';
+    if (btnInstallModal) btnInstallModal.style.display = 'none';
     mostrarToast('Casa do Sagrado instalada com sucesso!');
   });
 
@@ -131,18 +133,49 @@ function vincularEventosGlobais() {
   document.getElementById('btnForcarUpdateLocal')?.addEventListener('click', () => forcarAtualizacaoLocal(true));
   document.getElementById('btnLancarUpdateGeral')?.addEventListener('click', lancarAtualizacaoGeral);
 
-  // Instalação PWA Direta
-  document.getElementById('btnInstalarApp')?.addEventListener('click', async () => {
+  // Instalação PWA Direta (Header e Modal)
+  const dispararInstalacao = async () => {
     if (deferredInstallPrompt) {
       deferredInstallPrompt.prompt();
       const { outcome } = await deferredInstallPrompt.userChoice;
       if (outcome === 'accepted') {
-        const btn = document.getElementById('btnInstalarApp');
-        if (btn) btn.style.display = 'none';
+        const btnHeader = document.getElementById('btnInstalarApp');
+        const btnModal = document.getElementById('btnInstalarAppModal');
+        if (btnHeader) btnHeader.style.display = 'none';
+        if (btnModal) btnModal.style.display = 'none';
       }
       deferredInstallPrompt = null;
     } else {
-      mostrarToast('Para instalar, use o menu do navegador (3 pontinhos > Instalar aplicativo).');
+      mostrarToast('Para instalar, use o menu do seu navegador (3 pontinhos > Instalar aplicativo).');
+    }
+  };
+
+  document.getElementById('btnInstalarApp')?.addEventListener('click', dispararInstalacao);
+  document.getElementById('btnInstalarAppModal')?.addEventListener('click', dispararInstalacao);
+
+  // Alternância de Modo Tela Cheia (Ocultar Barra de Status do Sistema)
+  const btnFullscreen = document.getElementById('btnAlternarTelaCheia');
+  const txtFullscreen = document.getElementById('txtTelaCheia');
+
+  btnFullscreen?.addEventListener('click', () => {
+    if (!document.fullscreenElement) {
+      if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch(() => {
+          mostrarToast('Modo de tela cheia não suportado ou bloqueado no navegador.');
+        });
+      }
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+      }
+    }
+  });
+
+  document.addEventListener('fullscreenchange', () => {
+    if (txtFullscreen) {
+      txtFullscreen.innerText = document.fullscreenElement
+        ? 'Sair da Tela Cheia'
+        : 'Alternar Tela Cheia (Ocultar Barra de Status)';
     }
   });
 

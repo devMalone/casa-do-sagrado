@@ -113,7 +113,7 @@ function sincronizarVendaRealtime(novaVenda) {
 export async function lancarAtualizacaoGeral() {
   const confirmou = await pedirConfirmacao({
     titulo: 'Lançar Atualização Geral',
-    mensagem: 'Deseja disparar uma limpeza de cache e atualização para todos os dispositivos conectados? O app de todos os sócios (inclusive da Maria) será atualizado na versão mais recente.',
+    mensagem: 'Deseja disparar uma limpeza de cache e atualização para todos os dispositivos conectados? Todos os terminais sincronizados serão atualizados para a versão mais recente.',
     textoConfirmar: 'Sim, atualizar todos',
     perigo: false
   });
@@ -130,7 +130,7 @@ export async function lancarAtualizacaoGeral() {
       // 1. Grava na nuvem para atualizar quem abrir o app depois
       await state.supabase.from('casa_configuracoes').upsert([{
         chave: 'versao_app',
-        valor: { timestamp, solicitante, versao: 'v4' },
+        valor: { timestamp, solicitante, versao: 'v7' },
         updated_at: new Date().toISOString()
       }]);
 

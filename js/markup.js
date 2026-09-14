@@ -21,7 +21,7 @@ export function recalcularMarkup() {
     : 30;
 
   if (resPctTag) {
-    resPctTag.innerText = `(${pctReservaConfig}%)`;
+    resPctTag.innerText = `${pctReservaConfig}%`;
   }
 
   const somaTaxasEMargem = taxaPct + margemPct;

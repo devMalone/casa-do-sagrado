@@ -30,9 +30,8 @@
       </div>
     </div>
     <div class="top-actions">
-      <button class="install-pill-btn" id="btnInstalarApp" style="display: none;" title="Instalar Aplicativo">
-        <i data-lucide="download" style="width: 13px; height: 13px;"></i>
-        <span>Instalar</span>
+      <button class="install-pill-btn" id="btnInstalarApp" style="display: none;" title="Instalar Aplicativo no Dispositivo">
+        <i data-lucide="download" style="width: 14px; height: 14px;"></i>
       </button>
       <div class="operator-pill" id="btnOperadorAtual" title="Alternar Operador">
         <span class="operator-avatar" id="avatarInitial">O</span>
@@ -53,7 +52,7 @@
     <section id="tab-estoque" class="tab-view active">
       <div class="search-box">
         <i data-lucide="search" style="width: 18px; height: 18px; color: var(--text-muted);"></i>
-        <input type="text" id="searchInput" class="search-input" placeholder="Buscar por nome ou categoria...">
+        <input type="text" id="searchInput" class="search-input" placeholder="Buscar por nome ou categoria..." autocomplete="off" autocorrect="off" spellcheck="false" data-form-type="other">
       </div>
 
       <div class="categories-bar-wrapper">
@@ -144,17 +143,17 @@
         
         <div class="form-group" style="margin-top: 10px;">
           <label class="form-label">Custo Total dos Insumos (R$)</label>
-          <input type="text" id="calcCusto" class="form-input" inputmode="numeric" placeholder="R$ 0,00">
+          <input type="text" id="calcCusto" name="calc_c_input" class="form-input" inputmode="numeric" placeholder="R$ 0,00" autocomplete="off" autocorrect="off" spellcheck="false" data-form-type="other">
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
           <div class="form-group">
             <label class="form-label">Taxa Cartão (%)</label>
-            <input type="number" id="calcTaxa" class="form-input" value="3.0" step="0.5">
+            <input type="number" id="calcTaxa" name="calc_t_input" class="form-input" value="3.0" step="0.5" autocomplete="off" autocorrect="off" spellcheck="false" data-form-type="other">
           </div>
           <div class="form-group">
             <label class="form-label">Margem Desejada (%)</label>
-            <input type="number" id="calcMargem" class="form-input" value="60" step="1">
+            <input type="number" id="calcMargem" name="calc_m_input" class="form-input" value="60" step="1" autocomplete="off" autocorrect="off" spellcheck="false" data-form-type="other">
           </div>
         </div>
 
@@ -170,11 +169,16 @@
           </div>
           <div class="calc-details-grid">
             <div class="calc-detail-card">
-              <div class="calc-detail-label">Lucro Líquido</div>
+              <div class="calc-detail-header">
+                <span class="calc-detail-label">Lucro Líquido</span>
+              </div>
               <div class="calc-detail-value green" id="calcLucroUnitario">R$ 0,00</div>
             </div>
             <div class="calc-detail-card">
-              <div class="calc-detail-label">Fundo Reserva <span id="calcReservaPctTag">(30%)</span></div>
+              <div class="calc-detail-header">
+                <span class="calc-detail-label">Fundo Reserva</span>
+                <span class="calc-detail-badge" id="calcReservaPctTag">30%</span>
+              </div>
               <div class="calc-detail-value amber" id="calcReservaUnitaria">R$ 0,00</div>
             </div>
           </div>
@@ -219,22 +223,22 @@
   <div class="modal-overlay center" id="modalOnboarding">
     <div class="modal-container" style="max-width: 380px;">
       <div class="modal-header" style="justify-content: center;">
-        <div class="brand-title">Identificação do Dispositivo</div>
+        <div class="brand-title">Identificação do Operador</div>
       </div>
       <div class="modal-body" style="text-align: center;">
         <div style="width: 44px; height: 44px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 50%; color: #f1f5f9; display: flex; align-items: center; justify-content: center; margin: 0 auto;">
           <i data-lucide="user" style="width: 20px; height: 20px;"></i>
         </div>
         <p style="font-size: 13px; color: var(--text-muted); margin-top: 10px;">
-          Digite seu nome para identificar quem está operando as vendas neste aparelho:
+          Informe o nome do operador para registro das movimentações comerciais neste terminal:
         </p>
         
-        <div style="margin-top: 14px;">
-          <input type="text" id="inputOutroOperador" class="form-input" placeholder="Seu nome..." style="text-align: center; font-size: 15px;">
-        </div>
+        <form autocomplete="off" onsubmit="return false;" style="margin-top: 14px;">
+          <input type="text" id="inputOutroOperador" class="form-input" placeholder="Nome do operador..." style="text-align: center; font-size: 15px;" autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false" data-form-type="other" data-lpignore="true">
+        </form>
       </div>
       <div class="modal-footer">
-        <button class="btn-main" id="btnSalvarOperador">Salvar Identificação</button>
+        <button class="btn-main" id="btnSalvarOperador">Confirmar Operador</button>
       </div>
     </div>
   </div>
@@ -303,12 +307,12 @@
         <div class="modal-title" id="tituloModalProd">Cadastrar Produto</div>
         <button class="modal-close-btn"><i data-lucide="x"></i></button>
       </div>
-      <div class="modal-body">
+      <form class="modal-body" autocomplete="off" onsubmit="return false;" novalidate>
         <input type="hidden" id="prodEditId">
         
         <div class="form-group">
           <label class="form-label">Nome do Produto</label>
-          <input type="text" id="prodNome" class="form-input" placeholder="Ex: Terço Madeira São Bento">
+          <input type="text" id="prodNome" name="item_desc_field" class="form-input" placeholder="Ex: Terço Madeira São Bento" autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false" data-form-type="other" data-lpignore="true" data-1p-ignore="true">
         </div>
 
         <div class="form-group">
@@ -322,25 +326,25 @@
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
           <div class="form-group">
             <label class="form-label">Preço de Custo (Unit.)</label>
-            <input type="text" id="prodPrecoCusto" class="form-input" inputmode="numeric" placeholder="R$ 0,00">
+            <input type="text" id="prodPrecoCusto" name="item_custo_field" class="form-input" inputmode="numeric" placeholder="R$ 0,00" autocomplete="off" autocorrect="off" spellcheck="false" data-form-type="other" data-lpignore="true">
           </div>
           <div class="form-group">
             <label class="form-label">Preço de Venda</label>
-            <input type="text" id="prodPrecoVenda" class="form-input" inputmode="numeric" placeholder="R$ 0,00">
+            <input type="text" id="prodPrecoVenda" name="item_venda_field" class="form-input" inputmode="numeric" placeholder="R$ 0,00" autocomplete="off" autocorrect="off" spellcheck="false" data-form-type="other" data-lpignore="true">
           </div>
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
           <div class="form-group">
             <label class="form-label">Estoque Inicial</label>
-            <input type="number" id="prodEstoque" class="form-input" value="0" min="0">
+            <input type="number" id="prodEstoque" name="item_est_field" class="form-input" value="0" min="0" autocomplete="off" autocorrect="off" spellcheck="false" data-form-type="other">
           </div>
           <div class="form-group">
             <label class="form-label">Estoque Mínimo</label>
-            <input type="number" id="prodEstoqueMin" class="form-input" value="0" min="0">
+            <input type="number" id="prodEstoqueMin" name="item_estmin_field" class="form-input" value="0" min="0" autocomplete="off" autocorrect="off" spellcheck="false" data-form-type="other">
           </div>
         </div>
-      </div>
+      </form>
       <div class="modal-footer">
         <button type="button" class="btn-icon-danger" id="btnExcluirProduto" title="Excluir Produto" style="display: none;">
           <i data-lucide="trash-2"></i>
@@ -363,7 +367,7 @@
         <p style="font-size: 13px; color: var(--text-muted);">Adicione ou remova categorias do catálogo e formulários.</p>
         
         <div class="add-cat-row">
-          <input type="text" id="inputNovaCategoria" class="form-input" placeholder="Nome da categoria..." style="height: 44px; font-size: 14px;">
+          <input type="text" id="inputNovaCategoria" class="form-input" placeholder="Nome da categoria..." style="height: 44px; font-size: 14px;" autocomplete="off" autocorrect="off" spellcheck="false" data-form-type="other">
           <button type="button" class="btn-main" id="btnAdicionarCategoria" style="width: auto; padding: 0 16px; height: 44px; font-size: 13px; white-space: nowrap;">
             <i data-lucide="plus"></i> Adicionar
           </button>
@@ -389,19 +393,19 @@
         <div class="modal-title">Configurar Fundo de Reserva</div>
         <button class="modal-close-btn"><i data-lucide="x"></i></button>
       </div>
-      <div class="modal-body">
+      <form class="modal-body" autocomplete="off" onsubmit="return false;" novalidate>
         <p style="font-size: 13px; color: var(--text-muted);">Ajuste a meta do fundo e o percentual de retenção sobre o lucro das vendas.</p>
         
         <div class="form-group">
           <label class="form-label">Meta / Teto do Fundo (R$)</label>
-          <input type="number" id="inputMetaReserva" class="form-input" placeholder="1500" step="100">
+          <input type="number" id="inputMetaReserva" class="form-input" placeholder="1500" step="100" autocomplete="off" autocorrect="off" spellcheck="false" data-form-type="other">
         </div>
 
         <div class="form-group">
           <label class="form-label">Porcentagem Retida do Lucro (%)</label>
-          <input type="number" id="inputPctReserva" class="form-input" placeholder="30" min="1" max="100" step="5">
+          <input type="number" id="inputPctReserva" class="form-input" placeholder="30" min="1" max="100" step="5" autocomplete="off" autocorrect="off" spellcheck="false" data-form-type="other">
         </div>
-      </div>
+      </form>
       <div class="modal-footer">
         <button class="btn-main" id="btnSalvarConfigReserva">
           <i data-lucide="save"></i> Salvar Parâmetros
@@ -441,19 +445,27 @@
         <div style="border-top: 1px solid var(--border); padding-top: 12px; margin-top: 8px;">
           <div style="font-size: 12.5px; font-weight: 700; color: var(--text); margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
             <i data-lucide="refresh-cw" style="width: 14px; height: 14px; color: var(--primary);"></i>
-            <span>Controle de Versão & Cache</span>
+            <span>Sistema & Atualização</span>
           </div>
           <p style="font-size: 11.5px; color: var(--text-muted); margin-bottom: 10px;">
-            Força o navegador a buscar os arquivos novos no GitHub Pages sem apagar seus dados de vendas e estoque.
+            Força o navegador a buscar os arquivos novos no servidor sem alterar o histórico de vendas ou estoque.
           </p>
           <div style="display: flex; flex-direction: column; gap: 8px;">
+            <button type="button" class="btn-secondary-action" id="btnAlternarTelaCheia">
+              <i data-lucide="maximize-2" style="width: 14px; height: 14px;"></i>
+              <span id="txtTelaCheia">Alternar Tela Cheia (Ocultar Barra de Status)</span>
+            </button>
+            <button type="button" class="btn-secondary-action" id="btnInstalarAppModal" style="display: none;">
+              <i data-lucide="download" style="width: 14px; height: 14px; color: var(--primary);"></i>
+              <span>Instalar Aplicativo no Dispositivo</span>
+            </button>
             <button type="button" class="btn-secondary-action" id="btnForcarUpdateLocal">
               <i data-lucide="rotate-ccw" style="width: 14px; height: 14px;"></i>
-              <span>Atualizar Este Aparelho (Limpar Cache)</span>
+              <span>Atualizar Este Terminal (Limpar Cache)</span>
             </button>
             <button type="button" class="btn-broadcast-action" id="btnLancarUpdateGeral">
               <i data-lucide="radio" style="width: 14px; height: 14px;"></i>
-              <span>Lançar Atualização Geral (Atualizar Todos os Sócios)</span>
+              <span>Lançar Atualização Geral (Todos os Terminais)</span>
             </button>
           </div>
         </div>

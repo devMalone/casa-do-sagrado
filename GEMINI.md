@@ -47,29 +47,27 @@ Este documento define as diretrizes técnicas, regras de arquitetura, padrões v
 
 ## 3. Diretrizes de UI/UX Mobile-First
 
-### Regra 5: Viewport Mobile Dinâmico (`100dvh`)
-- Nunca usar `height: 100vh` fixo em layouts móveis de tela cheia. A barra de endereços do Android/Chrome quebra o layout.
+### Regra 5: Viewport Mobile Dinâmico (`100dvh`) & Layout Flexbox
+- NUNCA usar `-webkit-fill-available` em `html` e `body`. No Chromium/Android, esta propriedade calcula o tamanho da tela física completa (incluindo a barra de navegação de 3 botões do Android), empurrando o container para fora da tela e cortando a rolagem do final da página.
 - Utilizar sempre:
   ```css
   html {
     height: 100%;
-    height: -webkit-fill-available;
   }
   body {
     height: 100%;
-    height: 100vh;
     height: 100dvh;
-    min-height: -webkit-fill-available;
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
   }
   ```
 
-### Regra 6: Respiro Inferior Calibrado
-- O container de rolagem principal (`.app-viewport`) deve ter respiro inferior de 24px acima da barra de navegação:
-  ```css
-  padding-bottom: calc(var(--bottom-nav-height) + var(--safe-bottom) + 24px) !important;
-  ```
-  Isso garante que botões no fim da página rolem com folga confortável sem deixar vazios pretos excessivos.
+### Regra 6: Posicionamento da Barra de Navegação & Respiro
+- A barra inferior (`.bottom-nav`) DEVE ser um item flexível fixo no fluxo (`flex-shrink: 0;`), e NUNCA `position: fixed`.
+- O container principal (`.app-viewport`) deve ser `flex: 1 1 0; min-height: 0; overflow-y: auto;`. Desta forma, ele termina fisicamente ACIMA da barra de navegação, sendo impossível qualquer card ficar escondido atrás dos botões.
+- Na aba de Estoque, usar `padding-bottom: 72px;` em `.products-grid` para que o botão flutuante FAB (`+`) nunca cubra o último produto.
+- Em atualizações e reloads, usar `window.location.replace()` limpo sem poluir a URL com parâmetros `?v=...` que quebram o escopo PWA no Android.
 - Ao alternar entre abas, o scroll deve ser resetado para o topo: `viewport.scrollTop = 0;`.
 
 ### Regra 7: Touch-First & Confirmação Inline

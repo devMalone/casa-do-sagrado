@@ -78,11 +78,9 @@ export async function forcarAtualizacaoLocal(mostrarAviso = true) {
     console.warn('[Update] Erro ao atualizar cache:', err);
   }
 
-  // 3. Força recarregamento com parâmetro timestamp para ignorar cache de disco
+  // 3. Força recarregamento mantendo a URL limpa do PWA para preservar o viewport nativo
   setTimeout(() => {
-    const cleanUrl = new URL(window.location.origin + window.location.pathname);
-    cleanUrl.searchParams.set('v', Date.now().toString());
-    window.location.href = cleanUrl.toString();
+    window.location.replace(window.location.origin + window.location.pathname);
   }, 250);
 }
 

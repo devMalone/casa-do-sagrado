@@ -12,6 +12,16 @@ import { renderizarCurvaABC, alternarSubAbaFerramentas } from './curva_abc.js';
 
 // --- CICLO DE VIDA E INICIALIZAÇÃO ---
 document.addEventListener('DOMContentLoaded', () => {
+  // Previne restauração automática de scroll travado pelo navegador
+  if ('scrollRestoration' in history) {
+    history.scrollRestoration = 'manual';
+  }
+
+  // Remove eventuais parâmetros de query legados (ex: ?v=...) para restaurar o escopo limpo do PWA
+  if (window.location.search) {
+    window.history.replaceState({}, '', window.location.pathname);
+  }
+
   carregarDadosLocais();
   configurarCallbacks();
   vincularEventosGlobais();

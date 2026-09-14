@@ -47,16 +47,19 @@ Este documento define as diretrizes técnicas, regras de arquitetura, padrões v
 
 ## 3. Diretrizes de UI/UX Mobile-First
 
-### Regra 5: Viewport Mobile Dinâmico (`100dvh`) & Layout Flexbox
-- NUNCA usar `-webkit-fill-available` em `html` e `body`. No Chromium/Android, esta propriedade calcula o tamanho da tela física completa (incluindo a barra de navegação de 3 botões do Android), empurrando o container para fora da tela e cortando a rolagem do final da página.
-- Utilizar sempre:
+### Regra 5: Viewport Mobile Dinâmico (`--app-height` & `window.innerHeight`) & Modo Standalone
+- **Modo do Manifest:** NUNCA usar `"display": "fullscreen"` no `manifest.json`. Em aparelhos Android (especialmente Samsung One UI com barra de navegação clássica de 3 botões), o modo fullscreen inicializa a janela por trás dos botões do sistema no primeiro carregamento, empurrando o menu inferior para baixo e exigindo minimizar e reabrir o app para consertar. Utilizar sempre `"display": "standalone"`.
+- **Altura Dinâmica do Viewport:** NUNCA usar `-webkit-fill-available`. Em navegadores móveis, o `100dvh` pode divergir momentaneamente da barra do sistema. Portanto, vincular dinamicamente a variável CSS `--app-height` ao `window.innerHeight` no JavaScript (`resize` e inicialização) e definir:
   ```css
   html {
     height: 100%;
+    width: 100%;
   }
   body {
     height: 100%;
-    height: 100dvh;
+    height: var(--app-height, 100dvh);
+    max-height: 100%;
+    width: 100%;
     overflow: hidden;
     display: flex;
     flex-direction: column;

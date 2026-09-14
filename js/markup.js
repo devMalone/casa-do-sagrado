@@ -53,7 +53,15 @@ export function recalcularMarkup() {
 
   // Preço com centavos exatos (reflete variações de 1% a 5% sem travar no teto inteiro)
   const precoExato = Math.round((custo / divisor) * 100) / 100;
-  const precoArredondado = Math.ceil(precoExato);
+  
+  // Arredondamento comercial inteligente:
+  // Se for item miúdo (< R$ 10,00), arredonda para frações de R$ 0,50 (ex: 2,11 -> 2,50) em vez de pular para 3,00
+  let precoArredondado;
+  if (precoExato < 10) {
+    precoArredondado = Math.ceil(precoExato * 2) / 2;
+  } else {
+    precoArredondado = Math.ceil(precoExato);
+  }
   
   const lucroUnitario = precoExato - custo - (precoExato * taxaPct);
   const reservaUnitaria = lucroUnitario * (pctReservaConfig / 100);

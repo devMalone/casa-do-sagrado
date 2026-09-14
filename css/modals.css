@@ -192,6 +192,43 @@
   cursor: pointer;
 }
 
+/* Category Select Chips (In-App Product Form) */
+.category-select-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-height: 140px;
+  overflow-y: auto;
+  padding: 2px 0;
+}
+
+.cat-select-chip {
+  background: var(--surface-card);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  padding: 8px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cat-select-chip:active {
+  transform: scale(0.96);
+}
+
+.cat-select-chip.active {
+  background: var(--primary-glow);
+  border-color: var(--primary);
+  color: var(--primary);
+  font-weight: 700;
+}
+
 /* Category Manager Chips */
 .cat-chips-list {
   display: flex;

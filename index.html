@@ -260,10 +260,22 @@
         <div class="form-group">
           <label class="form-label">Forma de Pagamento</label>
           <div class="payment-methods">
-            <div class="pay-btn active" data-method="Pix">⚡ Pix</div>
-            <div class="pay-btn" data-method="Dinheiro">💵 Dinheiro</div>
-            <div class="pay-btn" data-method="Cartão Débito">💳 Débito</div>
-            <div class="pay-btn" data-method="Cartão Crédito">💳 Crédito</div>
+            <div class="pay-btn active" data-method="Pix">
+              <i data-lucide="zap" style="width: 15px; height: 15px;"></i>
+              <span>Pix</span>
+            </div>
+            <div class="pay-btn" data-method="Dinheiro">
+              <i data-lucide="banknote" style="width: 15px; height: 15px;"></i>
+              <span>Dinheiro</span>
+            </div>
+            <div class="pay-btn" data-method="Cartão Débito">
+              <i data-lucide="credit-card" style="width: 15px; height: 15px;"></i>
+              <span>Débito</span>
+            </div>
+            <div class="pay-btn" data-method="Cartão Crédito">
+              <i data-lucide="credit-card" style="width: 15px; height: 15px;"></i>
+              <span>Crédito</span>
+            </div>
           </div>
         </div>
 
@@ -297,9 +309,10 @@
 
         <div class="form-group">
           <label class="form-label">Categoria</label>
-          <select id="prodCategoria" class="form-select">
-            <!-- Injetado dinamicamente -->
-          </select>
+          <input type="hidden" id="prodCategoria" value="">
+          <div class="category-select-chips" id="prodCategoryChips">
+            <!-- Injetado dinamicamente no visual do app -->
+          </div>
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
@@ -339,11 +352,11 @@
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
           <div class="form-group">
             <label class="form-label">Estoque Inicial</label>
-            <input type="number" id="prodEstoque" class="form-input" value="10" min="0">
+            <input type="number" id="prodEstoque" class="form-input" value="0" min="0">
           </div>
           <div class="form-group">
             <label class="form-label">Estoque Mínimo</label>
-            <input type="number" id="prodEstoqueMin" class="form-input" value="2" min="1">
+            <input type="number" id="prodEstoqueMin" class="form-input" value="0" min="0">
           </div>
         </div>
       </div>

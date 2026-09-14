@@ -4,7 +4,7 @@ import { state, carregarDadosLocais, salvarLocal } from './state.js';
 import { abrirModal, fecharModalAtual, mostrarToast, refreshIcons, aplicarMascaraMoeda } from './utils.js';
 import { iniciarSupabaseSeConfigurado, salvarConfigSupabase, exportarBackupJSON, setAppRenderCallback } from './supabase.js';
 import { renderizarCategoriasUI, adicionarCategoria, abrirModalCategorias, setOnCategoriaAlteradaCallback } from './categorias.js';
-import { renderizarEstoque, filtrarProdutos, abrirModalProduto, salvarProduto, setOnQuickSellCallback, toggleCalculadoraLote, recalcularCustoLote, aplicarCustoLote, excluirProdutoAtual } from './estoque.js';
+import { renderizarEstoque, filtrarProdutos, abrirModalProduto, salvarProduto, setOnQuickSellCallback, toggleCalculadoraLote, recalcularCustoLote, aplicarCustoLote, excluirProdutoAtual, setOnProdutoAlteradoCallback } from './estoque.js';
 import { iniciarVendaRapida, ajustarQtdVenda, selecionarMetodoPgto, confirmarVendaFinal, renderizarHistoricoVendas, setOnVendaRealizadaCallback } from './vendas.js';
 import { renderizarDashboard, abrirModalConfigReserva, salvarConfigReserva } from './dashboard.js';
 import { recalcularMarkup, copiarPrecoParaNovoProduto } from './markup.js';
@@ -37,6 +37,7 @@ function configurarCallbacks() {
   setOnCategoriaAlteradaCallback(renderizarEstoque);
   setOnQuickSellCallback(iniciarVendaRapida);
   setOnVendaRealizadaCallback(renderizarTudo);
+  setOnProdutoAlteradoCallback(renderizarTudo);
 }
 
 function renderizarTudo() {

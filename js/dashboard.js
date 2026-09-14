@@ -60,7 +60,7 @@ export function renderizarDashboard() {
     } else {
       opContainer.innerHTML = entries.map(([nome, qtd]) => `
         <div style="display: flex; justify-content: space-between; align-items: center;">
-          <span>👤 ${nome}</span>
+          <span style="display: flex; align-items: center; gap: 6px;"><i data-lucide="user" style="width: 14px; height: 14px; color: var(--text-muted);"></i> ${nome}</span>
           <strong>${qtd} ${qtd === 1 ? 'venda' : 'vendas'}</strong>
         </div>
       `).join('');

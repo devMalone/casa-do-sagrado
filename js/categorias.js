@@ -29,13 +29,31 @@ export function renderizarCategoriasUI() {
     });
   }
 
-  // 2. Select do modal de produtos
-  const selectProd = document.getElementById('prodCategoria');
-  if (selectProd) {
-    const valAtual = selectProd.value;
-    selectProd.innerHTML = state.categorias.map(cat => `<option value="${cat}">${cat}</option>`).join('');
-    if (state.categorias.includes(valAtual)) {
-      selectProd.value = valAtual;
+  // 2. Chips interativos de seleção no modal de produto (UI nativa do app sem <select> legado)
+  const chipsContainer = document.getElementById('prodCategoryChips');
+  const inputProdCat = document.getElementById('prodCategoria');
+  if (chipsContainer && inputProdCat) {
+    let valorSelecionado = inputProdCat.value;
+    if ((!valorSelecionado || !state.categorias.includes(valorSelecionado)) && state.categorias.length > 0) {
+      valorSelecionado = state.categorias[0];
+      inputProdCat.value = valorSelecionado;
+    }
+
+    if (state.categorias.length === 0) {
+      chipsContainer.innerHTML = '<span style="font-size: 12px; color: var(--text-muted);">Nenhuma categoria ativa. Crie uma em "Categorias".</span>';
+    } else {
+      chipsContainer.innerHTML = state.categorias.map(cat => {
+        const active = cat === valorSelecionado ? 'active' : '';
+        return `<div class="cat-select-chip ${active}" data-cat="${cat}">${cat}</div>`;
+      }).join('');
+
+      chipsContainer.querySelectorAll('.cat-select-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+          chipsContainer.querySelectorAll('.cat-select-chip').forEach(c => c.classList.remove('active'));
+          chip.classList.add('active');
+          inputProdCat.value = chip.getAttribute('data-cat');
+        });
+      });
     }
   }
 

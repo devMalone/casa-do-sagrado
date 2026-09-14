@@ -96,18 +96,27 @@ export function filtrarProdutos() {
   }
 }
 
+let onProdutoAlteradoCallback = null;
+
+export function setOnProdutoAlteradoCallback(fn) {
+  onProdutoAlteradoCallback = fn;
+}
+
 export function abrirModalProduto() {
   document.getElementById('tituloModalProd').innerText = 'Cadastrar Produto';
   document.getElementById('prodEditId').value = '';
   document.getElementById('prodNome').value = '';
-  renderizarCategoriasUI();
-  if (state.categorias.length > 0) {
-    document.getElementById('prodCategoria').value = state.categorias[0];
+  
+  const inputProdCat = document.getElementById('prodCategoria');
+  if (inputProdCat) {
+    inputProdCat.value = state.categorias.length > 0 ? state.categorias[0] : '';
   }
+  renderizarCategoriasUI();
+
   document.getElementById('prodPrecoCusto').value = '';
   document.getElementById('prodPrecoVenda').value = '';
-  document.getElementById('prodEstoque').value = '10';
-  document.getElementById('prodEstoqueMin').value = '2';
+  document.getElementById('prodEstoque').value = '0';
+  document.getElementById('prodEstoqueMin').value = '0';
 
   const btnDel = document.getElementById('btnExcluirProduto');
   if (btnDel) btnDel.style.display = 'none';
@@ -131,8 +140,13 @@ export function editarProduto(id) {
   document.getElementById('tituloModalProd').innerText = 'Editar Produto';
   document.getElementById('prodEditId').value = p.id;
   document.getElementById('prodNome').value = p.nome;
+
+  const inputProdCat = document.getElementById('prodCategoria');
+  if (inputProdCat) {
+    inputProdCat.value = p.categoria;
+  }
   renderizarCategoriasUI();
-  document.getElementById('prodCategoria').value = p.categoria;
+
   document.getElementById('prodPrecoCusto').value = formatarMoedaExibicao(p.preco_custo);
   document.getElementById('prodPrecoVenda').value = formatarMoedaExibicao(p.preco_venda);
   document.getElementById('prodEstoque').value = p.estoque_atual;
@@ -222,11 +236,11 @@ export async function excluirProdutoAtual() {
 export function salvarProduto() {
   const id = document.getElementById('prodEditId').value;
   const nome = document.getElementById('prodNome').value.trim();
-  const categoria = document.getElementById('prodCategoria').value;
+  const categoria = document.getElementById('prodCategoria').value || (state.categorias.length > 0 ? state.categorias[0] : 'Geral');
   const preco_custo = parseMonetaryValue(document.getElementById('prodPrecoCusto').value);
   const preco_venda = parseMonetaryValue(document.getElementById('prodPrecoVenda').value);
   const estoque_atual = parseInt(document.getElementById('prodEstoque').value, 10) || 0;
-  const estoque_minimo = parseInt(document.getElementById('prodEstoqueMin').value, 10) || 2;
+  const estoque_minimo = parseInt(document.getElementById('prodEstoqueMin').value, 10) || 0;
 
   if (!nome || preco_venda <= 0) {
     mostrarToast('Preencha o nome e um preço de venda válido.');
@@ -243,6 +257,13 @@ export function salvarProduto() {
       p.estoque_atual = estoque_atual;
       p.estoque_minimo = estoque_minimo;
       p.updated_at = new Date().toISOString();
+
+      // Sincroniza o novo nome do produto em todas as vendas já registradas
+      state.vendas.forEach(v => {
+        if (v.produto_id === id) {
+          v.nome_produto = nome;
+        }
+      });
     }
   } else {
     const novo = {
@@ -264,9 +285,18 @@ export function salvarProduto() {
   mostrarToast('Produto salvo com sucesso!');
   renderizarEstoque();
 
+  if (onProdutoAlteradoCallback) {
+    onProdutoAlteradoCallback();
+  }
+
   if (state.supabase) {
     const itemSalvo = id ? state.produtos.find(prod => prod.id === id) : state.produtos[0];
     state.supabase.from('casa_produtos').upsert([itemSalvo])
       .catch(err => console.warn('[Sync] Erro upsert produto:', err));
+
+    if (id) {
+      state.supabase.from('casa_vendas').update({ nome_produto: nome }).eq('produto_id', id)
+        .catch(err => console.warn('[Sync] Erro atualizar nome em vendas:', err));
+    }
   }
 }

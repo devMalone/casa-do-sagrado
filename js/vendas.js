@@ -125,15 +125,18 @@ export function renderizarHistoricoVendas() {
       day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
     });
 
+    const prodAtual = state.produtos.find(p => p.id === v.produto_id);
+    const nomeExibicao = prodAtual ? prodAtual.nome : (v.nome_produto || 'Produto');
+
     const item = document.createElement('div');
     item.className = 'sale-item';
     item.innerHTML = `
       <div class="sale-info">
-        <div class="sale-prod">${v.quantidade}x ${v.nome_produto}</div>
+        <div class="sale-prod">${v.quantidade}x ${nomeExibicao}</div>
         <div class="sale-meta">
           <span>${dataFormatada}</span>
           <span>•</span>
-          <span>👤 ${v.operador}</span>
+          <span style="display: inline-flex; align-items: center; gap: 3px;"><i data-lucide="user" style="width: 11px; height: 11px;"></i> ${v.operador}</span>
           <span>•</span>
           <span>${v.metodo_pagamento}</span>
         </div>

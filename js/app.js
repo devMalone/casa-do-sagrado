@@ -5,7 +5,7 @@ import { abrirModal, fecharModalAtual, mostrarToast, refreshIcons, aplicarMascar
 import { iniciarSupabaseSeConfigurado, alternarConexaoSupabase, exportarBackupJSON, setAppRenderCallback, lancarAtualizacaoGeral } from './supabase.js';
 import { renderizarCategoriasUI, adicionarCategoria, abrirModalCategorias, setOnCategoriaAlteradaCallback } from './categorias.js';
 import { renderizarEstoque, filtrarProdutos, abrirModalProduto, salvarProduto, setOnQuickSellCallback, excluirProdutoAtual, setOnProdutoAlteradoCallback } from './estoque.js';
-import { iniciarVendaRapida, ajustarQtdVenda, selecionarMetodoPgto, confirmarVendaFinal, renderizarHistoricoVendas, setOnVendaRealizadaCallback } from './vendas.js';
+import { iniciarVendaRapida, ajustarQtdVenda, selecionarMetodoPgto, confirmarVendaFinal, renderizarHistoricoVendas, setOnVendaRealizadaCallback, limparTodoHistoricoVendas } from './vendas.js';
 import { renderizarDashboard, abrirModalConfigReserva, salvarConfigReserva } from './dashboard.js';
 import { recalcularMarkup, copiarPrecoParaNovoProduto } from './markup.js';
 import { renderizarCurvaABC, alternarSubAbaFerramentas } from './curva_abc.js';
@@ -122,6 +122,12 @@ function mudarAba(abaId, btn) {
   if (tab) tab.classList.add('active');
   if (btn) btn.classList.add('active');
 
+  // Garante que o conteúdo role suavemente para o topo e desbugue posições de rolagem
+  const viewport = document.querySelector('.app-viewport');
+  if (viewport) {
+    viewport.scrollTop = 0;
+  }
+
   const fab = document.getElementById('fabAddProduct');
   if (fab) {
     fab.style.display = abaId === 'estoque' ? 'flex' : 'none';
@@ -195,6 +201,7 @@ function vincularEventosGlobais() {
   document.getElementById('btnVendaQtdMenos')?.addEventListener('click', () => ajustarQtdVenda(-1));
   document.getElementById('btnVendaQtdMais')?.addEventListener('click', () => ajustarQtdVenda(1));
   document.getElementById('btnConfirmarVenda')?.addEventListener('click', confirmarVendaFinal);
+  document.getElementById('btnLimparVendas')?.addEventListener('click', limparTodoHistoricoVendas);
   document.querySelectorAll('.payment-methods .pay-btn').forEach(btn => {
     btn.addEventListener('click', function() {
       selecionarMetodoPgto(this.getAttribute('data-method'), this);

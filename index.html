@@ -72,9 +72,15 @@
 
     <!-- ABA 2: HISTÓRICO DE VENDAS -->
     <section id="tab-vendas" class="tab-view">
-      <div class="kpi-card full-width" style="margin-bottom: 12px;">
-        <div class="kpi-label">Total de Vendas Registradas</div>
-        <div class="kpi-value green" id="vendasTotalContador">0 vendas</div>
+      <div class="kpi-card full-width sales-summary-header" style="margin-bottom: 12px;">
+        <div>
+          <div class="kpi-label">Total de Vendas Registradas</div>
+          <div class="kpi-value green" id="vendasTotalContador">0 vendas</div>
+        </div>
+        <button type="button" class="btn-clear-sales" id="btnLimparVendas" style="display: none;" title="Estornar todas as vendas registradas">
+          <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
+          <span>Limpar Vendas</span>
+        </button>
       </div>
       <div class="sales-list" id="salesListContainer">
         <!-- Injetado dinamicamente -->

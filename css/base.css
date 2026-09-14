@@ -31,24 +31,33 @@ input, textarea, select {
   user-select: text;
 }
 
+html {
+  height: 100%;
+  height: -webkit-fill-available;
+}
+
 body {
   font-family: var(--font);
   background-color: var(--bg);
   color: var(--text);
   line-height: 1.4;
+  height: 100%;
   height: 100vh;
+  height: 100dvh;
+  min-height: -webkit-fill-available;
   overflow: hidden;
   display: flex;
   flex-direction: column;
 }
 
 .app-viewport {
-  flex: 1;
-  overflow-y: auto;
+  flex: 1 1 auto;
+  overflow-y: scroll;
   overflow-x: hidden;
   padding: 16px;
-  padding-bottom: calc(var(--bottom-nav-height) + var(--safe-bottom) + 20px);
+  padding-bottom: calc(var(--bottom-nav-height) + var(--safe-bottom) + 90px) !important;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
 }
 
 .tab-view {

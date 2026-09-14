@@ -108,7 +108,12 @@ export function renderizarHistoricoVendas() {
   container.innerHTML = '';
 
   const contador = document.getElementById('vendasTotalContador');
-  if (contador) contador.innerText = `${state.vendas.length} vendas registradas`;
+  if (contador) contador.innerText = `${state.vendas.length} ${state.vendas.length === 1 ? 'venda registrada' : 'vendas registradas'}`;
+
+  const btnLimpar = document.getElementById('btnLimparVendas');
+  if (btnLimpar) {
+    btnLimpar.style.display = state.vendas.length > 0 ? 'inline-flex' : 'none';
+  }
 
   if (state.vendas.length === 0) {
     container.innerHTML = `
@@ -140,8 +145,9 @@ export function renderizarHistoricoVendas() {
         <div class="sale-prod">${v.quantidade}x ${nomeExibicao}</div>
         <div class="sale-top-right">
           <span class="sale-val">R$ ${formatarMoedaExibicao(v.valor_total)}</span>
-          <button type="button" class="btn-undo-sale" data-id="${v.id}" data-index="${index}" title="Desfazer / Estornar Venda">
-            <i data-lucide="rotate-ccw" style="width: 13px; height: 13px;"></i>
+          <button type="button" class="btn-undo-sale" data-id="${v.id}" data-index="${index}" title="Estornar esta venda">
+            <i data-lucide="rotate-ccw" style="width: 12px; height: 12px;"></i>
+            <span>Estornar</span>
           </button>
         </div>
       </div>
@@ -159,7 +165,11 @@ export function renderizarHistoricoVendas() {
     `;
 
     const btnUndo = item.querySelector('.btn-undo-sale');
-    btnUndo?.addEventListener('click', () => estornarVenda(v.id, index));
+    btnUndo?.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      estornarVenda(v.id, index);
+    });
 
     container.appendChild(item);
   });
@@ -182,12 +192,17 @@ export async function estornarVenda(vendaId, indexFallback) {
   const nomeExibicao = prodAtual ? prodAtual.nome : (venda.nome_produto || 'Produto');
   const qtdEstorno = parseInt(venda.quantidade, 10) || 1;
 
-  const confirmou = await pedirConfirmacao({
-    titulo: 'Desfazer Venda?',
-    mensagem: `Deseja realmente desfazer a venda de ${qtdEstorno}x "${nomeExibicao}" (R$ ${formatarMoedaExibicao(venda.valor_total)})? A quantidade será devolvida ao estoque.`,
-    textoConfirmar: 'Sim, Desfazer Venda',
-    perigo: true
-  });
+  let confirmou = false;
+  try {
+    confirmou = await pedirConfirmacao({
+      titulo: 'Desfazer Venda?',
+      mensagem: `Deseja realmente desfazer a venda de ${qtdEstorno}x "${nomeExibicao}" (R$ ${formatarMoedaExibicao(venda.valor_total)})? A quantidade será devolvida ao estoque.`,
+      textoConfirmar: 'Sim, Desfazer Venda',
+      perigo: true
+    });
+  } catch (err) {
+    confirmou = window.confirm(`Deseja desfazer a venda de ${qtdEstorno}x "${nomeExibicao}"?`);
+  }
 
   if (!confirmou) return;
 
@@ -218,10 +233,57 @@ export async function estornarVenda(vendaId, indexFallback) {
   if (navigator.vibrate) navigator.vibrate(40);
   mostrarToast(`Venda desfeita! ${qtdEstorno}x "${nomeExibicao}" devolvido ao estoque.`);
 
-  // 5. Re-renderiza imediatamente a listagem de vendas
+  // 5. Atualiza imediatamente todas as telas
   renderizarHistoricoVendas();
+  if (onVendaRealizadaCallback) {
+    onVendaRealizadaCallback();
+  }
+}
 
-  // 6. Atualiza dashboard e estoque
+export async function limparTodoHistoricoVendas() {
+  if (state.vendas.length === 0) return;
+
+  let confirmou = false;
+  try {
+    confirmou = await pedirConfirmacao({
+      titulo: 'Limpar Todo Histórico?',
+      mensagem: `Deseja excluir todas as ${state.vendas.length} vendas registradas? O estoque correspondente de cada item será restaurado.`,
+      textoConfirmar: 'Sim, Limpar Todas as Vendas',
+      perigo: true
+    });
+  } catch (err) {
+    confirmou = window.confirm(`Deseja excluir todas as ${state.vendas.length} vendas registradas?`);
+  }
+
+  if (!confirmou) return;
+
+  // 1. Restaura estoque para os produtos vendidos
+  state.vendas.forEach(v => {
+    const prod = state.produtos.find(p => p.id === v.produto_id);
+    if (prod) {
+      prod.estoque_atual = (parseInt(prod.estoque_atual, 10) || 0) + (parseInt(v.quantidade, 10) || 1);
+      if (state.supabase) {
+        state.supabase.from('casa_produtos')
+          .update({ estoque_atual: prod.estoque_atual, updated_at: new Date().toISOString() })
+          .eq('id', prod.id)
+          .catch(err => console.warn('[Sync] Erro ao restaurar estoque:', err));
+      }
+    }
+  });
+
+  // 2. Remove da nuvem Supabase
+  if (state.supabase) {
+    state.supabase.from('casa_vendas').delete().neq('id', '00000000-0000-0000-0000-000000000000').catch(() => {});
+  }
+
+  // 3. Limpa localmente
+  state.vendas = [];
+  salvarLocal();
+
+  if (navigator.vibrate) navigator.vibrate(50);
+  mostrarToast('Histórico de vendas resetado e estoques restaurados!');
+
+  renderizarHistoricoVendas();
   if (onVendaRealizadaCallback) {
     onVendaRealizadaCallback();
   }

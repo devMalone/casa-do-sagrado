@@ -17,6 +17,11 @@ document.addEventListener('DOMContentLoaded', () => {
     history.scrollRestoration = 'manual';
   }
 
+  // Sincroniza a altura real da janela para que a barra de navegação nunca desça além da tela
+  sincronizarAlturaViewport();
+  window.addEventListener('resize', sincronizarAlturaViewport);
+  window.addEventListener('orientationchange', () => setTimeout(sincronizarAlturaViewport, 150));
+
   // Remove eventuais parâmetros de query legados (ex: ?v=...) para restaurar o escopo limpo do PWA
   if (window.location.search) {
     window.history.replaceState({}, '', window.location.pathname);
@@ -64,6 +69,11 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 let deferredInstallPrompt = null;
+
+function sincronizarAlturaViewport() {
+  const vh = window.innerHeight;
+  document.documentElement.style.setProperty('--app-height', `${vh}px`);
+}
 
 function configurarCallbacks() {
   setAppRenderCallback(renderizarTudo);

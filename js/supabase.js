@@ -141,6 +141,14 @@ export function conectarRealtime() {
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'casa_vendas' }, payload => {
       sincronizarVendaRealtime(payload.new);
     })
+    .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'casa_vendas' }, payload => {
+      const idRemovido = payload.old?.id;
+      if (idRemovido) {
+        state.vendas = state.vendas.filter(v => v.id !== idRemovido);
+        salvarLocal();
+        if (appRenderCallback) appRenderCallback();
+      }
+    })
     // Broadcast em tempo real para forçar atualização em massa em todos os aparelhos
     .on('broadcast', { event: 'comando_forcar_update' }, async (event) => {
       const solicitante = event.payload?.solicitante || 'Administrador';
@@ -195,7 +203,7 @@ export async function lancarAtualizacaoGeral() {
       // 1. Grava na nuvem para atualizar quem abrir o app depois
       await state.supabase.from('casa_configuracoes').upsert([{
         chave: 'versao_app',
-        valor: { timestamp, solicitante, versao: 'v14' },
+        valor: { timestamp, solicitante, versao: 'v15' },
         updated_at: new Date().toISOString()
       }]);
 
@@ -257,9 +265,9 @@ export async function baixarDadosIniciaisNuvem() {
       salvarLocal();
     }
 
-    // 3. Baixa vendas
-    const { data: sales } = await state.supabase.from('casa_vendas').select('*').order('created_at', { ascending: false });
-    if (sales && sales.length > 0) {
+    // 3. Baixa vendas (aceita array vazio para sincronizar exclusão/reset com sucesso)
+    const { data: sales, error: errSales } = await state.supabase.from('casa_vendas').select('*').order('created_at', { ascending: false });
+    if (!errSales && Array.isArray(sales)) {
       state.vendas = sales;
       salvarLocal();
     }

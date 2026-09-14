@@ -140,6 +140,7 @@ export function renderizarHistoricoVendas() {
 
     const item = document.createElement('div');
     item.className = 'sale-item';
+    item.setAttribute('data-sale-id', v.id);
     item.innerHTML = `
       <div class="sale-top-row">
         <div class="sale-prod">${v.quantidade}x ${nomeExibicao}</div>
@@ -165,10 +166,34 @@ export function renderizarHistoricoVendas() {
     `;
 
     const btnUndo = item.querySelector('.btn-undo-sale');
+    let confirmTimer = null;
+
     btnUndo?.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      estornarVenda(v.id, index);
+
+      // Se já está no estado de confirmação, executa o estorno no segundo toque
+      if (btnUndo.classList.contains('confirming')) {
+        if (confirmTimer) clearTimeout(confirmTimer);
+        executarEstorno(v.id, index, item);
+      } else {
+        // Primeiro toque: solicita confirmação rápida no próprio botão
+        btnUndo.classList.add('confirming');
+        btnUndo.innerHTML = `
+          <i data-lucide="alert-circle" style="width: 12px; height: 12px;"></i>
+          <span>Confirmar?</span>
+        `;
+        refreshIcons();
+
+        confirmTimer = setTimeout(() => {
+          btnUndo.classList.remove('confirming');
+          btnUndo.innerHTML = `
+            <i data-lucide="rotate-ccw" style="width: 12px; height: 12px;"></i>
+            <span>Estornar</span>
+          `;
+          refreshIcons();
+        }, 3500);
+      }
     });
 
     container.appendChild(item);
@@ -177,13 +202,28 @@ export function renderizarHistoricoVendas() {
   refreshIcons();
 }
 
-export async function estornarVenda(vendaId, indexFallback) {
+async function removerVendaSupabase(venda) {
+  if (!state.supabase || !venda) return;
+  try {
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(venda.id);
+    if (isUUID) {
+      await state.supabase.from('casa_vendas').delete().eq('id', venda.id);
+    } else if (venda.created_at) {
+      await state.supabase.from('casa_vendas').delete().eq('created_at', venda.created_at);
+    }
+  } catch (err) {
+    console.warn('[Sync] Erro ao remover venda do Supabase:', err);
+  }
+}
+
+export async function executarEstorno(vendaId, indexFallback, itemElement) {
   let index = state.vendas.findIndex(v => String(v.id) === String(vendaId));
   if (index === -1 && typeof indexFallback === 'number' && state.vendas[indexFallback]) {
     index = indexFallback;
   }
   if (index === -1) {
     mostrarToast('Venda não localizada para estorno.');
+    renderizarHistoricoVendas();
     return;
   }
 
@@ -192,21 +232,12 @@ export async function estornarVenda(vendaId, indexFallback) {
   const nomeExibicao = prodAtual ? prodAtual.nome : (venda.nome_produto || 'Produto');
   const qtdEstorno = parseInt(venda.quantidade, 10) || 1;
 
-  let confirmou = false;
-  try {
-    confirmou = await pedirConfirmacao({
-      titulo: 'Desfazer Venda?',
-      mensagem: `Deseja realmente desfazer a venda de ${qtdEstorno}x "${nomeExibicao}" (R$ ${formatarMoedaExibicao(venda.valor_total)})? A quantidade será devolvida ao estoque.`,
-      textoConfirmar: 'Sim, Desfazer Venda',
-      perigo: true
-    });
-  } catch (err) {
-    confirmou = window.confirm(`Deseja desfazer a venda de ${qtdEstorno}x "${nomeExibicao}"?`);
+  // 1. Feedback visual imediato com animação de saída suave
+  if (itemElement) {
+    itemElement.classList.add('removing');
   }
 
-  if (!confirmou) return;
-
-  // 1. Devolve estoque ao produto
+  // 2. Devolve estoque ao produto localmente
   if (prodAtual) {
     prodAtual.estoque_atual = (parseInt(prodAtual.estoque_atual, 10) || 0) + qtdEstorno;
     if (state.supabase) {
@@ -217,27 +248,28 @@ export async function estornarVenda(vendaId, indexFallback) {
     }
   }
 
-  // 2. Remove do histórico local
+  // 3. Remove do histórico local
   state.vendas.splice(index, 1);
   salvarLocal();
 
-  // 3. Remove do banco de dados na nuvem se tiver ID remoto
-  if (state.supabase && venda.id && !String(venda.id).startsWith('venda_')) {
-    state.supabase.from('casa_vendas')
-      .delete()
-      .eq('id', venda.id)
-      .catch(err => console.warn('[Sync] Erro ao estornar venda no Supabase:', err));
-  }
-
-  // 4. Feedback tátil e aviso visual
+  // 4. Feedback tátil e aviso na tela
   if (navigator.vibrate) navigator.vibrate(40);
-  mostrarToast(`Venda desfeita! ${qtdEstorno}x "${nomeExibicao}" devolvido ao estoque.`);
+  mostrarToast(`Estorno concluído! ${qtdEstorno}x "${nomeExibicao}" devolvido ao estoque.`);
 
-  // 5. Atualiza imediatamente todas as telas
-  renderizarHistoricoVendas();
-  if (onVendaRealizadaCallback) {
-    onVendaRealizadaCallback();
-  }
+  // 5. Remove da nuvem em segundo plano
+  removerVendaSupabase(venda);
+
+  // 6. Atualiza contador e dashboard sem atraso
+  setTimeout(() => {
+    renderizarHistoricoVendas();
+    if (onVendaRealizadaCallback) {
+      onVendaRealizadaCallback();
+    }
+  }, 220);
+}
+
+export async function estornarVenda(vendaId, indexFallback) {
+  executarEstorno(vendaId, indexFallback, null);
 }
 
 export async function limparTodoHistoricoVendas() {

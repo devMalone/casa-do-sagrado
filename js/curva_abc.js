@@ -76,7 +76,11 @@ export function renderizarCurvaABC() {
         <div class="abc-item-row">
           <div class="abc-item-info">
             <span class="abc-item-name">${item.nome}</span>
-            <span class="abc-item-meta">Balcão: <strong>${item.balcao}</strong> • Margem: <span class="abc-item-pct">${item.margem}%</span></span>
+            <div class="abc-item-meta">
+              <span class="abc-meta-balcao">Balcão: <strong>${item.balcao}</strong></span>
+              <span class="abc-meta-dot">•</span>
+              <span class="abc-meta-margem">Margem: <strong class="abc-item-pct">${item.margem}%</strong></span>
+            </div>
           </div>
           <button type="button" class="btn-apply-margin" data-margin="${item.margem}" data-name="${item.nome}" title="Aplicar margem de ${item.margem}% no Markup">
             <i data-lucide="calculator" style="width: 13px; height: 13px;"></i>

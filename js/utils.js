@@ -54,3 +54,57 @@ export function refreshIcons() {
     window.lucide.createIcons();
   }
 }
+
+export function pedirConfirmacao({ titulo = 'Confirmação', mensagem = 'Deseja continuar?', textoConfirmar = 'Confirmar', perigo = true } = {}) {
+  return new Promise((resolve) => {
+    const modal = document.getElementById('modalConfirmacao');
+    if (!modal) {
+      resolve(window.confirm(mensagem));
+      return;
+    }
+
+    const elTitulo = document.getElementById('confirmModalTitulo');
+    const elMsg = document.getElementById('confirmModalMsg');
+    const btnSim = document.getElementById('btnConfirmModalSim');
+    const btnNao = document.getElementById('btnConfirmModalNao');
+    const btnX = document.getElementById('btnConfirmModalX');
+
+    if (elTitulo) elTitulo.innerText = titulo;
+    if (elMsg) elMsg.innerText = mensagem;
+    if (btnSim) {
+      btnSim.innerText = textoConfirmar;
+      btnSim.className = perigo ? 'btn-danger' : 'btn-main';
+    }
+
+    let resolvido = false;
+
+    const onConfirm = () => {
+      if (resolvido) return;
+      resolvido = true;
+      cleanup();
+      fecharModalAtual();
+      resolve(true);
+    };
+
+    const onCancel = () => {
+      if (resolvido) return;
+      resolvido = true;
+      cleanup();
+      fecharModalAtual();
+      resolve(false);
+    };
+
+    function cleanup() {
+      btnSim?.removeEventListener('click', onConfirm);
+      btnNao?.removeEventListener('click', onCancel);
+      btnX?.removeEventListener('click', onCancel);
+    }
+
+    btnSim?.addEventListener('click', onConfirm);
+    btnNao?.addEventListener('click', onCancel);
+    btnX?.addEventListener('click', onCancel);
+
+    abrirModal('modalConfirmacao');
+  });
+}
+

@@ -1,5 +1,6 @@
 // js/markup.js — Calculadora de Ficha Técnica e Markup Divisor
 
+import { state } from './state.js';
 import { parseMonetaryValue, formatarMoedaExibicao } from './utils.js';
 import { abrirModalProduto } from './estoque.js';
 
@@ -9,10 +10,19 @@ export function recalcularMarkup() {
   const margemPct = (parseFloat(document.getElementById('calcMargem')?.value) || 0) / 100;
 
   const alertBox = document.getElementById('calcAlert');
-  const resultBox = document.getElementById('calcResultBox');
   const precoSugElem = document.getElementById('calcPrecoSugerido');
+  const precoArredElem = document.getElementById('calcPrecoArredondado');
   const lucroUnitElem = document.getElementById('calcLucroUnitario');
   const resUnitElem = document.getElementById('calcReservaUnitaria');
+  const resPctTag = document.getElementById('calcReservaPctTag');
+
+  const pctReservaConfig = (state.config && typeof state.config.percentual_reserva === 'number') 
+    ? state.config.percentual_reserva 
+    : 30;
+
+  if (resPctTag) {
+    resPctTag.innerText = `(${pctReservaConfig}%)`;
+  }
 
   const somaTaxasEMargem = taxaPct + margemPct;
 
@@ -23,6 +33,7 @@ export function recalcularMarkup() {
       alertBox.style.display = 'block';
     }
     if (precoSugElem) precoSugElem.innerText = 'R$ 0,00';
+    if (precoArredElem) precoArredElem.innerText = '';
     if (lucroUnitElem) lucroUnitElem.innerText = 'R$ 0,00';
     if (resUnitElem) resUnitElem.innerText = 'R$ 0,00';
     return;
@@ -34,20 +45,28 @@ export function recalcularMarkup() {
 
   if (divisor <= 0 || custo <= 0) {
     if (precoSugElem) precoSugElem.innerText = 'R$ 0,00';
+    if (precoArredElem) precoArredElem.innerText = '';
     if (lucroUnitElem) lucroUnitElem.innerText = 'R$ 0,00';
     if (resUnitElem) resUnitElem.innerText = 'R$ 0,00';
     return;
   }
 
-  // Preço com centavos exatos (para refletir variações de 1% a 5% sem travar no teto inteiro)
+  // Preço com centavos exatos (reflete variações de 1% a 5% sem travar no teto inteiro)
   const precoExato = Math.round((custo / divisor) * 100) / 100;
   const precoArredondado = Math.ceil(precoExato);
   
   const lucroUnitario = precoExato - custo - (precoExato * taxaPct);
-  const reservaUnitaria = lucroUnitario * 0.30;
+  const reservaUnitaria = lucroUnitario * (pctReservaConfig / 100);
 
   if (precoSugElem) {
-    precoSugElem.innerHTML = `R$ ${formatarMoedaExibicao(precoExato)} <span style="font-size: 13px; font-weight: 500; color: var(--text-muted);">(Arred.: R$ ${formatarMoedaExibicao(precoArredondado)})</span>`;
+    precoSugElem.innerText = `R$ ${formatarMoedaExibicao(precoExato)}`;
+  }
+  if (precoArredElem) {
+    if (precoArredondado !== precoExato) {
+      precoArredElem.innerText = `(ou R$ ${formatarMoedaExibicao(precoArredondado)} à vista)`;
+    } else {
+      precoArredElem.innerText = '';
+    }
   }
   if (lucroUnitElem) lucroUnitElem.innerText = `R$ ${formatarMoedaExibicao(lucroUnitario)}`;
   if (resUnitElem) resUnitElem.innerText = `R$ ${formatarMoedaExibicao(reservaUnitaria)}`;

@@ -157,11 +157,22 @@
         <div class="calc-alert" id="calcAlert"></div>
 
         <div class="calc-result-box" id="calcResultBox">
-          <div style="font-size: 12px; color: var(--text-muted);">Preço de Venda Sugerido:</div>
-          <div style="font-size: 24px; font-weight: 800; color: var(--primary);" id="calcPrecoSugerido">R$ 0,00</div>
-          <div style="display: flex; justify-content: space-between; font-size: 12.5px; border-top: 1px solid var(--border); padding-top: 8px;">
-            <span>Lucro Líquido Unitário: <strong style="color: var(--success);" id="calcLucroUnitario">R$ 0,00</strong></span>
-            <span>Reserva (30%): <strong style="color: var(--primary);" id="calcReservaUnitaria">R$ 0,00</strong></span>
+          <div class="calc-metric-highlight">
+            <div class="calc-metric-label">Preço de Venda Sugerido</div>
+            <div style="display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;">
+              <span class="calc-metric-value" id="calcPrecoSugerido">R$ 0,00</span>
+              <span id="calcPrecoArredondado" style="font-size: 12.5px; color: var(--text-muted); font-weight: 500;"></span>
+            </div>
+          </div>
+          <div class="calc-details-grid">
+            <div class="calc-detail-card">
+              <div class="calc-detail-label">Lucro Líquido</div>
+              <div class="calc-detail-value green" id="calcLucroUnitario">R$ 0,00</div>
+            </div>
+            <div class="calc-detail-card">
+              <div class="calc-detail-label">Fundo Reserva <span id="calcReservaPctTag">(30%)</span></div>
+              <div class="calc-detail-value amber" id="calcReservaUnitaria">R$ 0,00</div>
+            </div>
           </div>
         </div>
 
@@ -293,13 +304,36 @@
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
           <div class="form-group">
-            <label class="form-label">Preço de Custo</label>
+            <label class="form-label">Preço de Custo (Unit.)</label>
             <input type="text" id="prodPrecoCusto" class="form-input" inputmode="numeric" placeholder="R$ 0,00">
+            <button type="button" class="btn-link-helper" id="btnToggleCalculadoraLote">
+              <i data-lucide="calculator" style="width: 12px; height: 12px;"></i> Comprou por pacote/quilo?
+            </button>
           </div>
           <div class="form-group">
             <label class="form-label">Preço de Venda</label>
             <input type="text" id="prodPrecoVenda" class="form-input" inputmode="numeric" placeholder="R$ 0,00">
           </div>
+        </div>
+
+        <!-- Box Auxiliar de Cálculo por Lote/Pacote -->
+        <div class="lote-helper-box" id="boxCalculadoraLote" style="display: none;">
+          <div style="font-size: 11.5px; color: var(--text-muted);">
+            Calcule o custo individual se você comprou um pacote/quilo fechado:
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+            <div>
+              <label class="form-label" style="font-size: 11px;">Valor Total Pago</label>
+              <input type="text" id="loteValorTotal" class="form-input" placeholder="R$ 50,00" inputmode="numeric" style="font-size: 13px; height: 38px;">
+            </div>
+            <div>
+              <label class="form-label" style="font-size: 11px;">Qtd no Pacote</label>
+              <input type="number" id="loteQtdUnidades" class="form-input" placeholder="Ex: 100" min="1" style="font-size: 13px; height: 38px;">
+            </div>
+          </div>
+          <button type="button" class="btn-apply-lote" id="btnAplicarCustoLote">
+            <i data-lucide="check" style="width: 13px; height: 13px;"></i> Aplicar Custo Unitário: R$ <span id="loteResultadoUnit">0,00</span>
+          </button>
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
@@ -314,6 +348,9 @@
         </div>
       </div>
       <div class="modal-footer">
+        <button type="button" class="btn-icon-danger" id="btnExcluirProduto" title="Excluir Produto" style="display: none;">
+          <i data-lucide="trash-2"></i>
+        </button>
         <button class="btn-main" id="btnSalvarProduto">
           <i data-lucide="save"></i> Salvar Produto
         </button>
@@ -396,7 +433,7 @@
 
         <div class="form-group">
           <label class="form-label">Anon Public Key</label>
-          <input type="password" id="cfgSupabaseKey" class="form-input" placeholder="sb_publishable_..." value="sb_publishable_Pineihb_QYU9SoOKWfa37g_11PXYZR9">
+          <input type="text" id="cfgSupabaseKey" class="form-input" placeholder="sb_publishable_..." value="sb_publishable_Pineihb_QYU9SoOKWfa37g_11PXYZR9" autocomplete="off" spellcheck="false">
         </div>
 
         <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; margin-top: 4px;">
@@ -410,6 +447,28 @@
         <button class="pay-btn" id="btnExportarBackup" style="width: 100%;">
           <i data-lucide="download"></i> Baixar Backup Completo (JSON)
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 7: Confirmação In-App (Substitui confirm do navegador) -->
+  <div class="modal-overlay center" id="modalConfirmacao" style="z-index: 120;">
+    <div class="modal-container" style="max-width: 360px;">
+      <div class="modal-header">
+        <div class="modal-title" id="confirmModalTitulo">Confirmação</div>
+        <button class="modal-close-btn" id="btnConfirmModalX"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body" style="text-align: center; padding: 20px 16px;">
+        <div style="width: 48px; height: 48px; border-radius: 50%; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.25); color: var(--danger); display: flex; align-items: center; justify-content: center; margin: 0 auto 12px;">
+          <i data-lucide="alert-triangle" style="width: 24px; height: 24px;"></i>
+        </div>
+        <p id="confirmModalMsg" style="font-size: 14px; color: var(--text); line-height: 1.5; margin: 0;">
+          Deseja realmente prosseguir com esta ação?
+        </p>
+      </div>
+      <div class="modal-footer" style="gap: 10px;">
+        <button type="button" class="btn-cancel" id="btnConfirmModalNao">Cancelar</button>
+        <button type="button" class="btn-danger" id="btnConfirmModalSim">Confirmar</button>
       </div>
     </div>
   </div>

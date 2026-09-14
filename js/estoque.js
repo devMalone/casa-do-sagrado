@@ -1,7 +1,7 @@
 // js/estoque.js — Catálogo de Produtos e Controle de Estoque
 
 import { state, salvarLocal } from './state.js';
-import { formatarMoedaExibicao, parseMonetaryValue, mostrarToast, abrirModal, fecharModalAtual, refreshIcons } from './utils.js';
+import { formatarMoedaExibicao, parseMonetaryValue, mostrarToast, abrirModal, fecharModalAtual, refreshIcons, pedirConfirmacao } from './utils.js';
 import { renderizarCategoriasUI } from './categorias.js';
 
 let onQuickSellCallback = null;
@@ -108,6 +108,19 @@ export function abrirModalProduto() {
   document.getElementById('prodPrecoVenda').value = '';
   document.getElementById('prodEstoque').value = '10';
   document.getElementById('prodEstoqueMin').value = '2';
+
+  const btnDel = document.getElementById('btnExcluirProduto');
+  if (btnDel) btnDel.style.display = 'none';
+
+  const boxLote = document.getElementById('boxCalculadoraLote');
+  if (boxLote) boxLote.style.display = 'none';
+  const inpLoteValor = document.getElementById('loteValorTotal');
+  const inpLoteQtd = document.getElementById('loteQtdUnidades');
+  const txtLoteRes = document.getElementById('loteResultadoUnit');
+  if (inpLoteValor) inpLoteValor.value = '';
+  if (inpLoteQtd) inpLoteQtd.value = '';
+  if (txtLoteRes) txtLoteRes.innerText = '0,00';
+
   abrirModal('modalProduto');
 }
 
@@ -124,8 +137,86 @@ export function editarProduto(id) {
   document.getElementById('prodPrecoVenda').value = formatarMoedaExibicao(p.preco_venda);
   document.getElementById('prodEstoque').value = p.estoque_atual;
   document.getElementById('prodEstoqueMin').value = p.estoque_minimo;
+
+  const btnDel = document.getElementById('btnExcluirProduto');
+  if (btnDel) btnDel.style.display = 'flex';
+
+  const boxLote = document.getElementById('boxCalculadoraLote');
+  if (boxLote) boxLote.style.display = 'none';
   
   abrirModal('modalProduto');
+}
+
+export function toggleCalculadoraLote() {
+  const box = document.getElementById('boxCalculadoraLote');
+  if (!box) return;
+  const isHidden = box.style.display === 'none' || !box.style.display;
+  box.style.display = isHidden ? 'flex' : 'none';
+  if (isHidden) {
+    document.getElementById('loteValorTotal')?.focus();
+  }
+}
+
+export function recalcularCustoLote() {
+  const valorTotal = parseMonetaryValue(document.getElementById('loteValorTotal')?.value);
+  const qtd = parseInt(document.getElementById('loteQtdUnidades')?.value, 10) || 0;
+  const resElem = document.getElementById('loteResultadoUnit');
+
+  if (valorTotal > 0 && qtd > 0) {
+    const unit = Math.round((valorTotal / qtd) * 100) / 100;
+    if (resElem) resElem.innerText = formatarMoedaExibicao(unit);
+  } else {
+    if (resElem) resElem.innerText = '0,00';
+  }
+}
+
+export function aplicarCustoLote() {
+  const valorTotal = parseMonetaryValue(document.getElementById('loteValorTotal')?.value);
+  const qtd = parseInt(document.getElementById('loteQtdUnidades')?.value, 10) || 0;
+
+  if (valorTotal <= 0 || qtd <= 0) {
+    mostrarToast('Preencha o valor do pacote e a quantidade de unidades.');
+    return;
+  }
+
+  const unit = Math.round((valorTotal / qtd) * 100) / 100;
+  const inputCusto = document.getElementById('prodPrecoCusto');
+  const inputEstoque = document.getElementById('prodEstoque');
+
+  if (inputCusto) inputCusto.value = formatarMoedaExibicao(unit);
+  if (inputEstoque) inputEstoque.value = qtd;
+
+  const box = document.getElementById('boxCalculadoraLote');
+  if (box) box.style.display = 'none';
+
+  mostrarToast(`Custo de R$ ${formatarMoedaExibicao(unit)} / un e estoque de ${qtd} un aplicados!`);
+}
+
+export async function excluirProdutoAtual() {
+  const id = document.getElementById('prodEditId')?.value;
+  if (!id) return;
+  const prod = state.produtos.find(p => p.id === id);
+  const nome = prod ? prod.nome : 'este produto';
+
+  const confirmou = await pedirConfirmacao({
+    titulo: 'Excluir Produto',
+    mensagem: `Tem certeza que deseja remover "${nome}" do catálogo e estoque?`,
+    textoConfirmar: 'Sim, excluir',
+    perigo: true
+  });
+
+  if (confirmou) {
+    state.produtos = state.produtos.filter(p => p.id !== id);
+    salvarLocal();
+    fecharModalAtual();
+    mostrarToast(`Produto "${nome}" excluído.`);
+    renderizarEstoque();
+
+    if (state.supabase) {
+      state.supabase.from('casa_produtos').delete().eq('id', id)
+        .catch(err => console.warn('[Sync] Erro ao deletar produto:', err));
+    }
+  }
 }
 
 export function salvarProduto() {

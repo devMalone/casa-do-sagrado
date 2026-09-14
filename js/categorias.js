@@ -1,7 +1,7 @@
 // js/categorias.js — Gerenciamento Dinâmico de Categorias
 
 import { state, salvarLocal } from './state.js';
-import { mostrarToast, refreshIcons, abrirModal, fecharModalAtual } from './utils.js';
+import { mostrarToast, refreshIcons, abrirModal, fecharModalAtual, pedirConfirmacao } from './utils.js';
 
 let onCategoriaAlteradaCallback = null;
 
@@ -107,8 +107,15 @@ export function adicionarCategoria() {
   mostrarToast(`Categoria "${nome}" adicionada!`);
 }
 
-export function removerCategoria(nome) {
-  if (confirm(`Deseja remover a categoria "${nome}"?`)) {
+export async function removerCategoria(nome) {
+  const confirmou = await pedirConfirmacao({
+    titulo: 'Remover Categoria',
+    mensagem: `Tem certeza que deseja remover a categoria "${nome}"?`,
+    textoConfirmar: 'Sim, remover',
+    perigo: true
+  });
+
+  if (confirmou) {
     state.categorias = state.categorias.filter(c => c !== nome);
     if (state.categoriaFiltro === nome) {
       state.categoriaFiltro = 'todos';

@@ -41,7 +41,7 @@ export function renderizarDashboard() {
   if (resAcum) resAcum.innerText = `R$ ${formatarMoedaExibicao(reservaAcumulada)}`;
   if (sepHoje) sepHoje.innerText = `R$ ${formatarMoedaExibicao(hojeReserva)}`;
   if (metaTxt) metaTxt.innerText = formatarMoedaExibicao(state.config.tetoReserva);
-  if (pctTag) pctTag.innerText = `(${state.config.percentualReserva}%)`;
+  if (pctTag) pctTag.innerText = `${state.config.percentualReserva}%`;
 
   // Barra de progresso da Reserva
   const teto = state.config.tetoReserva || 1500;

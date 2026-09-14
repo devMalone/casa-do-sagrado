@@ -73,10 +73,22 @@ function renderizarTudo() {
 // --- CONTROLE DE OPERADOR ---
 function verificarOperadorOnboarding() {
   if (!state.operador) {
-    abrirModal('modalOnboarding');
+    abrirModalOperador();
   } else {
     atualizarBadgeOperador(state.operador);
   }
+}
+
+function abrirModalOperador() {
+  const input = document.getElementById('inputOutroOperador');
+  if (input) {
+    input.value = state.operador || '';
+  }
+  const btnClose = document.getElementById('btnFecharModalOperador');
+  const btnManter = document.getElementById('btnManterOperador');
+  if (btnClose) btnClose.style.display = state.operador ? 'flex' : 'none';
+  if (btnManter) btnManter.style.display = state.operador ? 'block' : 'none';
+  abrirModal('modalOnboarding');
 }
 
 function atualizarBadgeOperador(nome) {
@@ -89,15 +101,17 @@ function atualizarBadgeOperador(nome) {
 function confirmarOperadorDigitado() {
   const input = document.getElementById('inputOutroOperador');
   const nome = input ? input.value.trim() : '';
-  if (!nome) {
-    mostrarToast('Por favor, digite seu nome para continuar.');
+  if (!nome && !state.operador) {
+    mostrarToast('Por favor, informe o nome do operador para continuar.');
     return;
   }
-  state.operador = nome;
-  localStorage.setItem('casa_operador', nome);
-  atualizarBadgeOperador(nome);
+  if (nome) {
+    state.operador = nome;
+    localStorage.setItem('casa_operador', nome);
+    atualizarBadgeOperador(nome);
+    mostrarToast(`Operador registrado: ${nome}`);
+  }
   fecharModalAtual();
-  mostrarToast(`Operando como ${nome}`);
   renderizarDashboard();
 }
 
@@ -123,8 +137,10 @@ function mudarAba(abaId, btn) {
 // --- VINCULAÇÃO DE EVENTOS DE INTERFACE ---
 function vincularEventosGlobais() {
   // Operador
-  document.getElementById('btnOperadorAtual')?.addEventListener('click', () => abrirModal('modalOnboarding'));
+  document.getElementById('btnOperadorAtual')?.addEventListener('click', abrirModalOperador);
   document.getElementById('btnSalvarOperador')?.addEventListener('click', confirmarOperadorDigitado);
+  document.getElementById('btnManterOperador')?.addEventListener('click', fecharModalAtual);
+  document.getElementById('btnFecharModalOperador')?.addEventListener('click', fecharModalAtual);
 
   // Nuvem / Supabase & Atualizações
   document.getElementById('btnAbrirSync')?.addEventListener('click', () => abrirModal('modalSync'));

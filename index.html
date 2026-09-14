@@ -88,12 +88,13 @@
       <div class="reserve-box">
         <div class="reserve-header">
           <div class="reserve-title">
-            <i data-lucide="shield-check" style="width: 18px; height: 18px;"></i>
-            Fundo de Reserva <span id="tagPercentualReserva" style="font-size: 11px; opacity: 0.8;">(30%)</span>
+            <i data-lucide="shield-check" style="width: 17px; height: 17px; color: var(--primary);"></i>
+            <span>Fundo de Reserva</span>
+            <span id="tagPercentualReserva" class="reserve-pct-pill">30%</span>
           </div>
           <button class="reserve-target-btn" id="btnAbrirConfigReserva" title="Configurar Meta e Porcentagem">
-            <span>Meta: R$ <strong id="metaReservaVal">1.500,00</strong></span>
-            <i data-lucide="settings-2" style="width: 14px; height: 14px;"></i>
+            <span>Meta: <strong id="metaReservaVal">R$ 1.500,00</strong></span>
+            <i data-lucide="settings-2" style="width: 13px; height: 13px;"></i>
           </button>
         </div>
         <div class="progress-bar-bg">
@@ -222,8 +223,9 @@
   <!-- Modal 1: Onboarding Gatekeeper -->
   <div class="modal-overlay center" id="modalOnboarding">
     <div class="modal-container" style="max-width: 380px;">
-      <div class="modal-header" style="justify-content: center;">
-        <div class="brand-title">Identificação do Operador</div>
+      <div class="modal-header">
+        <div class="modal-title">Identificação do Operador</div>
+        <button class="modal-close-btn" id="btnFecharModalOperador" style="display: none;" title="Fechar"><i data-lucide="x"></i></button>
       </div>
       <div class="modal-body" style="text-align: center;">
         <div style="width: 44px; height: 44px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 50%; color: #f1f5f9; display: flex; align-items: center; justify-content: center; margin: 0 auto;">
@@ -237,8 +239,9 @@
           <input type="text" id="inputOutroOperador" class="form-input" placeholder="Nome do operador..." style="text-align: center; font-size: 15px;" autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false" data-form-type="other" data-lpignore="true">
         </form>
       </div>
-      <div class="modal-footer">
-        <button class="btn-main" id="btnSalvarOperador">Confirmar Operador</button>
+      <div class="modal-footer" style="flex-direction: column; gap: 8px;">
+        <button class="btn-main" id="btnSalvarOperador" style="width: 100%;">Salvar Identificação</button>
+        <button type="button" class="btn-secondary-action" id="btnManterOperador" style="width: 100%; display: none; justify-content: center;">Manter Operador Atual</button>
       </div>
     </div>
   </div>
@@ -452,20 +455,20 @@
           </p>
           <div style="display: flex; flex-direction: column; gap: 8px;">
             <button type="button" class="btn-secondary-action" id="btnAlternarTelaCheia">
-              <i data-lucide="maximize-2" style="width: 14px; height: 14px;"></i>
-              <span id="txtTelaCheia">Alternar Tela Cheia (Ocultar Barra de Status)</span>
+              <i data-lucide="maximize-2" style="width: 15px; height: 15px;"></i>
+              <span id="txtTelaCheia">Modo Tela Cheia (Imersivo)</span>
             </button>
             <button type="button" class="btn-secondary-action" id="btnInstalarAppModal" style="display: none;">
-              <i data-lucide="download" style="width: 14px; height: 14px; color: var(--primary);"></i>
+              <i data-lucide="download" style="width: 15px; height: 15px; color: var(--primary);"></i>
               <span>Instalar Aplicativo no Dispositivo</span>
             </button>
             <button type="button" class="btn-secondary-action" id="btnForcarUpdateLocal">
-              <i data-lucide="rotate-ccw" style="width: 14px; height: 14px;"></i>
-              <span>Atualizar Este Terminal (Limpar Cache)</span>
+              <i data-lucide="rotate-ccw" style="width: 15px; height: 15px;"></i>
+              <span>Atualizar Este Terminal (Local)</span>
             </button>
             <button type="button" class="btn-broadcast-action" id="btnLancarUpdateGeral">
-              <i data-lucide="radio" style="width: 14px; height: 14px;"></i>
-              <span>Lançar Atualização Geral (Todos os Terminais)</span>
+              <i data-lucide="radio" style="width: 15px; height: 15px;"></i>
+              <span>Atualizar Todos os Terminais (Remoto)</span>
             </button>
           </div>
         </div>

@@ -78,7 +78,6 @@ export function renderizarCurvaABC() {
             <span class="abc-item-name">${item.nome}</span>
             <div class="abc-item-meta">
               <span class="abc-meta-balcao">Balcão: <strong>${item.balcao}</strong></span>
-              <span class="abc-meta-dot">•</span>
               <span class="abc-meta-margem">Margem: <strong class="abc-item-pct">${item.margem}%</strong></span>
             </div>
           </div>

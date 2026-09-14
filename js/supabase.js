@@ -203,7 +203,7 @@ export async function lancarAtualizacaoGeral() {
       // 1. Grava na nuvem para atualizar quem abrir o app depois
       await state.supabase.from('casa_configuracoes').upsert([{
         chave: 'versao_app',
-        valor: { timestamp, solicitante, versao: 'v18' },
+        valor: { timestamp, solicitante, versao: 'v19' },
         updated_at: new Date().toISOString()
       }]);
 
@@ -244,7 +244,7 @@ export async function baixarDadosIniciaisNuvem() {
       }
     }
 
-    // 1. Baixa configurações (categorias e meta de reserva)
+    // 1. Baixa configurações (categorias, meta de reserva e custos fixos)
     const { data: configs } = await state.supabase.from('casa_configuracoes').select('*');
     if (configs && configs.length > 0) {
       configs.forEach(c => {
@@ -253,6 +253,12 @@ export async function baixarDadosIniciaisNuvem() {
         }
         if (c.chave === 'fundo_reserva' && c.valor) {
           state.config = { ...state.config, ...c.valor };
+        }
+        if (c.chave === 'custos_fixos' && c.valor) {
+          state.config.custosFixos = {
+            itens: Array.isArray(c.valor.itens) ? c.valor.itens : [],
+            diasUteisMes: Math.max(1, parseInt(c.valor.diasUteisMes, 10) || 26)
+          };
         }
       });
       salvarLocal();
@@ -291,4 +297,83 @@ export function exportarBackupJSON() {
   a.href = URL.createObjectURL(blob);
   a.download = `backup_casa_do_sagrado_${new Date().toISOString().slice(0, 10)}.json`;
   a.click();
+}
+
+export function exportarRelatorioCSV() {
+  if (!state.vendas || state.vendas.length === 0) {
+    mostrarToast('Nenhuma venda registrada para exportar.');
+    return;
+  }
+
+  const cabecalhos = [
+    'Data',
+    'Hora',
+    'Produto',
+    'Categoria',
+    'Quantidade',
+    'Preco Unitario (R$)',
+    'Custo Unitario (R$)',
+    'Valor Total (R$)',
+    'Custo Total (R$)',
+    'Lucro Bruto (R$)',
+    'Reserva (R$)',
+    'Forma Pagamento',
+    'Operador',
+    'ID Venda'
+  ];
+
+  const escapeCSV = (str) => {
+    if (str == null) return '""';
+    const s = String(str).replace(/"/g, '""');
+    return `"${s}"`;
+  };
+
+  const formatarNumCSV = (num) => {
+    if (num == null || isNaN(num)) return '0,00';
+    return Number(num).toFixed(2).replace('.', ',');
+  };
+
+  const linhas = [cabecalhos.map(escapeCSV).join(';')];
+
+  state.vendas.forEach(v => {
+    const prod = state.produtos.find(p => p.id === v.produto_id);
+    const cat = prod ? prod.categoria : 'Geral';
+    const nome = prod ? prod.nome : (v.nome_produto || 'Produto');
+    const d = new Date(v.created_at);
+    const dataStr = !isNaN(d) ? d.toLocaleDateString('pt-BR') : '';
+    const horaStr = !isNaN(d) ? d.toLocaleTimeString('pt-BR') : '';
+    const qtd = parseInt(v.quantidade, 10) || 1;
+    const custoUnit = prod ? prod.preco_custo : ((v.custo_total || 0) / qtd);
+
+    const linha = [
+      escapeCSV(dataStr),
+      escapeCSV(horaStr),
+      escapeCSV(nome),
+      escapeCSV(cat),
+      qtd,
+      formatarNumCSV(v.valor_unitario),
+      formatarNumCSV(custoUnit),
+      formatarNumCSV(v.valor_total),
+      formatarNumCSV(v.custo_total),
+      formatarNumCSV(v.lucro_bruto),
+      formatarNumCSV(v.valor_reserva_30),
+      escapeCSV(v.metodo_pagamento || 'Outro'),
+      escapeCSV(v.operador || 'Operador'),
+      escapeCSV(v.id || '')
+    ];
+    linhas.push(linha.join(';'));
+  });
+
+  const conteudoCSV = '\uFEFF' + linhas.join('\r\n');
+  const blob = new Blob([conteudoCSV], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const hoje = new Date().toISOString().slice(0, 10);
+  a.href = url;
+  a.download = `relatorio_vendas_casa_sagrado_${hoje}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  mostrarToast('Relatório CSV para Excel / IA baixado com sucesso!');
 }

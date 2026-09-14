@@ -6,7 +6,11 @@ export const state = {
   categorias: ['Católico', 'Umbanda/Quimbanda', 'Holístico', 'Geral'],
   config: {
     tetoReserva: 1500.00,
-    percentualReserva: 30
+    percentualReserva: 30,
+    custosFixos: {
+      itens: [],
+      diasUteisMes: 26
+    }
   },
   operador: localStorage.getItem('casa_operador') || null,
   categoriaFiltro: 'todos',
@@ -39,7 +43,17 @@ export function carregarDadosLocais() {
   }
   
   if (cfg) {
-    try { state.config = { ...state.config, ...JSON.parse(cfg) }; } catch (e) {}
+    try {
+      const parsed = JSON.parse(cfg);
+      state.config = {
+        ...state.config,
+        ...parsed,
+        custosFixos: {
+          itens: (parsed.custosFixos && Array.isArray(parsed.custosFixos.itens)) ? parsed.custosFixos.itens : [],
+          diasUteisMes: (parsed.custosFixos && parsed.custosFixos.diasUteisMes) ? Math.max(1, parseInt(parsed.custosFixos.diasUteisMes, 10)) : 26
+        }
+      };
+    } catch (e) {}
   }
 
   salvarLocal();

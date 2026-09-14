@@ -1,11 +1,11 @@
-﻿# Casa do Sagrado — Regras de Projeto, Arquitetura e Aprendizados da IA
+# Casa do Sagrado — Regras de Projeto, Arquitetura e Aprendizados da IA
 
-Este documento define as diretrizes técnicas, regras de arquitetura, padrões visuais e lições aprendidas consolidadas no desenvolvimento do sistema **Casa do Sagrado** (versão estável `v18`+). Todo assistente ou agente operando neste repositório DEVE seguir estas regras rigorosamente para evitar regressões.
+Este documento define as diretrizes técnicas, regras de arquitetura, padrões visuais e lições aprendidas consolidadas no desenvolvimento do sistema **Casa do Sagrado** (versão estável `v19`+). Todo assistente ou agente operando neste repositório DEVE seguir estas regras rigorosamente para evitar regressões.
 
 ---
 
 ## 1. Identidade e Filosofia do Projeto
-- **Sistema:** Gestão Comercial, Ponto de Venda (PDV), Fundo de Reserva, Markup Divisor e Curva ABC para Loja de Artigos Religiosos.
+- **Sistema:** Gestão Comercial, Ponto de Venda (PDV), Fundo de Reserva, Ponto de Equilíbrio Operacional, Markup Divisor, Curva ABC e Inteligência Comercial para Loja de Artigos Religiosos.
 - **Padrão Arquitetural:** PWA Local-First com Sincronização Supabase (PostgreSQL). O sistema deve funcionar perfeitamente offline e persistir instantaneamente no dispositivo.
 - **Identidade Visual:** Dark Mode Corporativo/ERP Sagrado (`#0b0f17` fundo, `#161f2e` superfícies, `#f59e0b` ouro, `#10b981` verde, `#ef4444` vermelho, `#38bdf8` azul).
 - **Sem Emojis:** Utilizar estritamente ícones vetoriais da biblioteca Lucide Icons (`<i data-lucide="..."></i>`).
@@ -16,7 +16,7 @@ Este documento define as diretrizes técnicas, regras de arquitetura, padrões v
 ## 2. Regras Invioláveis de Arquitetura e Código
 
 ### Regra 1: Princípio Local-First Estrito
-- Toda mutação de dados (estoque de produtos, adição/remoção de vendas, configurações, categorias) DEVE ser refletida no objeto em memória (`state.*`) e persistida no `localStorage` via `salvarLocal()` **de forma síncrona e imediata**.
+- Toda mutação de dados (estoque de produtos, adição/remoção de vendas, configurações, categorias, custos fixos) DEVE ser refletida no objeto em memória (`state.*`) e persistida no `localStorage` via `salvarLocal()` **de forma síncrona e imediata**.
 - O sucesso da ação para o usuário NÃO PODE depender de chamadas de rede. O estoque e o histórico devem atualizar no milissegundo zero.
 - A sincronização com a nuvem (Supabase) deve ocorrer em segundo plano, sem bloquear a interface.
 
@@ -85,3 +85,15 @@ Este documento define as diretrizes técnicas, regras de arquitetura, padrões v
 ### Regra 9: Tipografia Sem Quebra Órfã
 - Informações de preço e margem (ex: `Balcão: R$ 12,00`, `Margem: 35%`, `Meta: R$ 1.500,00`) DEVEM possuir `white-space: nowrap` para evitar que a porcentagem ou o símbolo monetário quebrem sozinhos em uma nova linha.
 - Nunca incluir caracteres estáticos de separação (`•` ou `|`) entre elementos com `flex-wrap`, pois geram separadores órfãos soltos no final da linha. Usar `gap` CSS.
+
+---
+
+## 4. Novas Diretrizes Financeiras & Inteligência (v19)
+
+### Regra 10: Ponto de Equilíbrio Operacional & Custos Fixos
+- O Ponto de Equilíbrio do dia é a relação entre a **meta diária de custo fixo** (`Total Custos Fixos Mensais ÷ Dias de Funcionamento no Mês`) e o **lucro bruto apurado no dia**.
+- As despesas fixas devem ser cadastradas item a item (ex: Aluguel, Luz, Internet, MEI), com dias de funcionamento configuráveis para acomodar folgas, feriados e variações do calendário comercial.
+- A persistência é síncrona local no `state.config.custosFixos` e assíncrona na nuvem via chave `custos_fixos` de `casa_configuracoes`.
+
+### Regra 11: Exportação CSV Compatível com Excel & IA
+- Relatórios tabulares de exportação para Excel no Brasil DEVEM utilizar separador ponto e vírgula (`;`), encoding UTF-8 com BOM (`\uFEFF`) e números decimais com vírgula (`,`) para abertura direta no Microsoft Excel sem corrupção de caracteres especiais ou necessidade de assistente de importação.

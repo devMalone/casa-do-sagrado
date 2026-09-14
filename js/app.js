@@ -2,11 +2,11 @@
 
 import { state, carregarDadosLocais, salvarLocal } from './state.js';
 import { abrirModal, fecharModalAtual, mostrarToast, refreshIcons, aplicarMascaraMoeda, forcarAtualizacaoLocal } from './utils.js';
-import { iniciarSupabaseSeConfigurado, alternarConexaoSupabase, exportarBackupJSON, setAppRenderCallback, lancarAtualizacaoGeral } from './supabase.js';
+import { iniciarSupabaseSeConfigurado, alternarConexaoSupabase, exportarBackupJSON, exportarRelatorioCSV, setAppRenderCallback, lancarAtualizacaoGeral } from './supabase.js';
 import { renderizarCategoriasUI, adicionarCategoria, abrirModalCategorias, setOnCategoriaAlteradaCallback } from './categorias.js';
 import { renderizarEstoque, filtrarProdutos, abrirModalProduto, salvarProduto, setOnQuickSellCallback, excluirProdutoAtual, setOnProdutoAlteradoCallback } from './estoque.js';
 import { iniciarVendaRapida, ajustarQtdVenda, selecionarMetodoPgto, confirmarVendaFinal, renderizarHistoricoVendas, setOnVendaRealizadaCallback, limparTodoHistoricoVendas } from './vendas.js';
-import { renderizarDashboard, abrirModalConfigReserva, salvarConfigReserva } from './dashboard.js';
+import { renderizarDashboard, abrirModalConfigReserva, salvarConfigReserva, abrirModalConfigEquilibrio, adicionarItemCustoFixo, atualizarDiasUteisMes } from './dashboard.js';
 import { recalcularMarkup, copiarPrecoParaNovoProduto } from './markup.js';
 import { renderizarCurvaABC, alternarSubAbaFerramentas } from './curva_abc.js';
 
@@ -153,6 +153,8 @@ function vincularEventosGlobais() {
   document.getElementById('btnAbrirSync')?.addEventListener('click', () => abrirModal('modalSync'));
   document.getElementById('btnSalvarSupabase')?.addEventListener('click', alternarConexaoSupabase);
   document.getElementById('btnExportarBackup')?.addEventListener('click', exportarBackupJSON);
+  document.getElementById('btnExportarCSVSync')?.addEventListener('click', exportarRelatorioCSV);
+  document.getElementById('btnExportarVendasCSV')?.addEventListener('click', exportarRelatorioCSV);
   document.getElementById('btnForcarUpdateLocal')?.addEventListener('click', () => forcarAtualizacaoLocal(true));
   document.getElementById('btnLancarUpdateGeral')?.addEventListener('click', lancarAtualizacaoGeral);
 
@@ -211,6 +213,22 @@ function vincularEventosGlobais() {
   // Fundo de Reserva
   document.getElementById('btnAbrirConfigReserva')?.addEventListener('click', abrirModalConfigReserva);
   document.getElementById('btnSalvarConfigReserva')?.addEventListener('click', salvarConfigReserva);
+
+  // Ponto de Equilíbrio & Custos Fixos
+  document.getElementById('btnAbrirConfigEquilibrio')?.addEventListener('click', abrirModalConfigEquilibrio);
+  document.getElementById('btnAdicionarCustoFixo')?.addEventListener('click', adicionarItemCustoFixo);
+  document.getElementById('inputNomeCustoFixo')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') document.getElementById('inputValorCustoFixo')?.focus();
+  });
+  document.getElementById('inputValorCustoFixo')?.addEventListener('input', function() {
+    aplicarMascaraMoeda(this);
+  });
+  document.getElementById('inputValorCustoFixo')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') adicionarItemCustoFixo();
+  });
+  document.getElementById('inputDiasUteisMes')?.addEventListener('input', function() {
+    atualizarDiasUteisMes(this.value);
+  });
 
   // Markup
   const calcCusto = document.getElementById('calcCusto');

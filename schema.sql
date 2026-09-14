@@ -42,9 +42,11 @@ CREATE TABLE public.casa_configuracoes (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 3. INSERIR CONFIGURAÇÃO DA META DO FUNDO DE RESERVA
+-- 3. INSERIR CONFIGURAÇÃO DA META DO FUNDO DE RESERVA E CUSTOS FIXOS
 INSERT INTO public.casa_configuracoes (chave, valor)
-VALUES ('fundo_reserva', '{"teto_meta": 1500.00, "percentual": 30}');
+VALUES 
+  ('fundo_reserva', '{"teto_meta": 1500.00, "percentual": 30}'),
+  ('custos_fixos', '{"itens": [], "diasUteisMes": 26}');
 
 -- 4. FUNÇÃO RPC PARA BAIXA ATÔMICA DE ESTOQUE
 CREATE OR REPLACE FUNCTION public.casa_dar_baixa_venda(

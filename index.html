@@ -77,10 +77,16 @@
           <div class="kpi-label">Total de Vendas Registradas</div>
           <div class="kpi-value green" id="vendasTotalContador">0 vendas</div>
         </div>
-        <button type="button" class="btn-clear-sales" id="btnLimparVendas" style="display: none;" title="Estornar todas as vendas registradas">
-          <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
-          <span>Limpar Vendas</span>
-        </button>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <button type="button" class="btn-secondary-action" id="btnExportarVendasCSV" style="height: 34px; padding: 0 10px; font-size: 12px; gap: 5px;" title="Exportar vendas para Excel / IA">
+            <i data-lucide="file-spreadsheet" style="width: 14px; height: 14px; color: var(--accent);"></i>
+            <span>Exportar CSV</span>
+          </button>
+          <button type="button" class="btn-clear-sales" id="btnLimparVendas" style="display: none;" title="Estornar todas as vendas registradas">
+            <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
+            <span>Limpar Vendas</span>
+          </button>
+        </div>
       </div>
       <div class="sales-list" id="salesListContainer">
         <!-- Injetado dinamicamente -->
@@ -116,6 +122,32 @@
         </div>
       </div>
 
+      <!-- Ponto de Equilíbrio Operacional -->
+      <div class="equilibrio-box" id="boxPontoEquilibrio">
+        <div class="equilibrio-header">
+          <div class="equilibrio-title">
+            <i data-lucide="scale" style="width: 17px; height: 17px; color: var(--accent);"></i>
+            <span>Ponto de Equilíbrio</span>
+            <span id="tagStatusEquilibrio" class="equilibrio-status-pill pendente">Pendente</span>
+          </div>
+          <button class="equilibrio-target-btn" id="btnAbrirConfigEquilibrio" title="Configurar Custos Fixos e Dias Úteis">
+            <span>Custo Fixo/dia: <strong id="equilibrioMetaDiaVal">R$ 0,00</strong></span>
+            <i data-lucide="settings-2" style="width: 13px; height: 13px;"></i>
+          </button>
+        </div>
+        <div class="progress-bar-bg">
+          <div class="equilibrio-progress-fill status-red" id="equilibrioProgressFill"></div>
+        </div>
+        <div class="reserve-footer">
+          <span>Lucro Coberto Hoje: <strong id="equilibrioLucroHojeVal">R$ 0,00</strong></span>
+          <span id="equilibrioPctVal">0%</span>
+        </div>
+        <div class="equilibrio-status-card pendente" id="boxEquilibrioStatusTxt">
+          <i data-lucide="info" id="equilibrioStatusIcon" style="width: 15px; height: 15px; flex-shrink: 0;"></i>
+          <span id="equilibrioMensagemTxt">Cadastre as despesas fixas para acompanhar a cobertura diária.</span>
+        </div>
+      </div>
+
       <!-- KPIs Gerais -->
       <div class="kpi-grid">
         <div class="kpi-card">
@@ -125,6 +157,14 @@
         <div class="kpi-card">
           <div class="kpi-label">Custo Mercadorias</div>
           <div class="kpi-value" id="kpiCusto">R$ 0,00</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Ticket Médio</div>
+          <div class="kpi-value cyan" id="kpiTicketMedio">R$ 0,00</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Itens / Venda (UPV)</div>
+          <div class="kpi-value" id="kpiUpv">0,0 un</div>
         </div>
         <div class="kpi-card full-width">
           <div class="kpi-label">Lucro Líquido Apurado</div>
@@ -453,6 +493,65 @@
     </div>
   </div>
 
+  <!-- Modal 5B: Configuração de Custos Fixos & Ponto de Equilíbrio -->
+  <div class="modal-overlay center" id="modalConfigEquilibrio">
+    <div class="modal-container" style="max-width: 420px;">
+      <div class="modal-header">
+        <div class="modal-title">Ponto de Equilíbrio & Custos</div>
+        <button class="modal-close-btn"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 13px; color: var(--text-muted);">
+          Cadastre as despesas fixas da loja e os dias de funcionamento no mês para calcular a cobertura diária.
+        </p>
+
+        <!-- Campo Dias Úteis / Funcionamento -->
+        <div class="form-group">
+          <label class="form-label" style="display: flex; justify-content: space-between; align-items: center;">
+            <span>Dias de Funcionamento no Mês</span>
+            <span style="font-size: 11px; color: var(--accent); font-weight: 500;">Conforme calendário/folgas</span>
+          </label>
+          <input type="number" id="inputDiasUteisMes" class="form-input" min="1" max="31" value="26" autocomplete="off" placeholder="Ex: 26">
+        </div>
+
+        <!-- Adicionar Despesa Fixa Item a Item -->
+        <div class="form-group" style="margin-top: 4px;">
+          <label class="form-label">Adicionar Despesa Fixa</label>
+          <div style="display: grid; grid-template-columns: 1fr 110px auto; gap: 8px;">
+            <input type="text" id="inputNomeCustoFixo" class="form-input" placeholder="Ex: Aluguel, Luz..." autocomplete="off" autocorrect="off" spellcheck="false">
+            <input type="text" id="inputValorCustoFixo" class="form-input" inputmode="numeric" placeholder="R$ 0,00" autocomplete="off">
+            <button type="button" class="btn-main" id="btnAdicionarCustoFixo" style="width: auto; padding: 0 12px; height: 44px;" title="Adicionar Despesa">
+              <i data-lucide="plus" style="width: 16px; height: 16px;"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Lista de Despesas Fixas Cadastradas -->
+        <div>
+          <label class="form-label" style="margin-bottom: 6px;">Despesas Cadastradas:</label>
+          <div id="listaCustosFixosContainer" class="custos-fixos-list">
+            <!-- Injetado dinamicamente -->
+          </div>
+        </div>
+
+        <!-- Resumo Consolidado de Custos Fixos -->
+        <div class="equilibrio-summary-card">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+            <span style="font-size: 12.5px; color: var(--text-muted);">Total Custos Fixos/Mês:</span>
+            <strong style="font-size: 14.5px; color: var(--text); white-space: nowrap;" id="modalTotalCustosFixos">R$ 0,00</strong>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 12.5px; color: var(--text-muted);">Meta de Cobertura Diária:</span>
+            <strong style="font-size: 16px; color: var(--accent); white-space: nowrap;" id="modalMetaDiariaEquilibrio">R$ 0,00</strong>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="pay-btn modal-close-btn" style="width: 100%;">Concluído</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal 6: Conexão Nuvem / Supabase & Backup -->
   <div class="modal-overlay center" id="modalSync">
     <div class="modal-container">
@@ -505,8 +604,11 @@
           </div>
         </div>
       </div>
-      <div class="modal-footer" style="flex-direction: column;">
-        <button class="pay-btn" id="btnExportarBackup" style="width: 100%;">
+      <div class="modal-footer" style="flex-direction: column; gap: 8px;">
+        <button class="pay-btn" id="btnExportarCSVSync" style="width: 100%;">
+          <i data-lucide="file-spreadsheet"></i> Exportar Relatório Excel / IA (CSV)
+        </button>
+        <button class="pay-btn" id="btnExportarBackup" style="width: 100%; background: transparent; border: 1px solid var(--border); color: var(--text-muted);">
           <i data-lucide="download"></i> Baixar Backup Completo (JSON)
         </button>
       </div>

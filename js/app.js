@@ -2,7 +2,7 @@
 
 import { state, carregarDadosLocais, salvarLocal } from './state.js';
 import { abrirModal, fecharModalAtual, mostrarToast, refreshIcons, aplicarMascaraMoeda, forcarAtualizacaoLocal } from './utils.js';
-import { iniciarSupabaseSeConfigurado, salvarConfigSupabase, exportarBackupJSON, setAppRenderCallback, lancarAtualizacaoGeral } from './supabase.js';
+import { iniciarSupabaseSeConfigurado, alternarConexaoSupabase, exportarBackupJSON, setAppRenderCallback, lancarAtualizacaoGeral } from './supabase.js';
 import { renderizarCategoriasUI, adicionarCategoria, abrirModalCategorias, setOnCategoriaAlteradaCallback } from './categorias.js';
 import { renderizarEstoque, filtrarProdutos, abrirModalProduto, salvarProduto, setOnQuickSellCallback, excluirProdutoAtual, setOnProdutoAlteradoCallback } from './estoque.js';
 import { iniciarVendaRapida, ajustarQtdVenda, selecionarMetodoPgto, confirmarVendaFinal, renderizarHistoricoVendas, setOnVendaRealizadaCallback } from './vendas.js';
@@ -145,7 +145,7 @@ function vincularEventosGlobais() {
 
   // Nuvem / Supabase & Atualizações
   document.getElementById('btnAbrirSync')?.addEventListener('click', () => abrirModal('modalSync'));
-  document.getElementById('btnSalvarSupabase')?.addEventListener('click', salvarConfigSupabase);
+  document.getElementById('btnSalvarSupabase')?.addEventListener('click', alternarConexaoSupabase);
   document.getElementById('btnExportarBackup')?.addEventListener('click', exportarBackupJSON);
   document.getElementById('btnForcarUpdateLocal')?.addEventListener('click', () => forcarAtualizacaoLocal(true));
   document.getElementById('btnLancarUpdateGeral')?.addEventListener('click', lancarAtualizacaoGeral);
@@ -169,32 +169,6 @@ function vincularEventosGlobais() {
 
   document.getElementById('btnInstalarApp')?.addEventListener('click', dispararInstalacao);
   document.getElementById('btnInstalarAppModal')?.addEventListener('click', dispararInstalacao);
-
-  // Alternância de Modo Tela Cheia (Ocultar Barra de Status do Sistema)
-  const btnFullscreen = document.getElementById('btnAlternarTelaCheia');
-  const txtFullscreen = document.getElementById('txtTelaCheia');
-
-  btnFullscreen?.addEventListener('click', () => {
-    if (!document.fullscreenElement) {
-      if (document.documentElement.requestFullscreen) {
-        document.documentElement.requestFullscreen().catch(() => {
-          mostrarToast('Modo de tela cheia não suportado ou bloqueado no navegador.');
-        });
-      }
-    } else {
-      if (document.exitFullscreen) {
-        document.exitFullscreen().catch(() => {});
-      }
-    }
-  });
-
-  document.addEventListener('fullscreenchange', () => {
-    if (txtFullscreen) {
-      txtFullscreen.innerText = document.fullscreenElement
-        ? 'Sair da Tela Cheia'
-        : 'Alternar Tela Cheia (Ocultar Barra de Status)';
-    }
-  });
 
   // Categorias
   document.getElementById('btnGerenciarCategorias')?.addEventListener('click', abrirModalCategorias);

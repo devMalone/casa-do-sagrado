@@ -106,33 +106,57 @@ export function pedirConfirmacao({ titulo = 'Confirmação', mensagem = 'Deseja 
       btnSim.className = perigo ? 'btn-danger' : 'btn-main';
     }
 
-    let resolvido = false;
+    let finalizado = false;
 
-    const onConfirm = () => {
-      if (resolvido) return;
-      resolvido = true;
-      cleanup();
-      fecharModalAtual();
-      resolve(true);
+    const responder = (resultado) => {
+      if (finalizado) return;
+      finalizado = true;
+
+      // Desvincula handlers para evitar vazamento ou duplicação
+      if (btnSim) btnSim.onclick = null;
+      if (btnNao) btnNao.onclick = null;
+      if (btnX) btnX.onclick = null;
+      if (modal) modal.onclick = null;
+
+      // Fecha o modal e sincroniza pilha de modais
+      modal.classList.remove('active');
+      const idx = state.modalStack.lastIndexOf('modalConfirmacao');
+      if (idx !== -1) {
+        state.modalStack.splice(idx, 1);
+      }
+
+      resolve(resultado);
     };
 
-    const onCancel = () => {
-      if (resolvido) return;
-      resolvido = true;
-      cleanup();
-      fecharModalAtual();
-      resolve(false);
-    };
-
-    function cleanup() {
-      btnSim?.removeEventListener('click', onConfirm);
-      btnNao?.removeEventListener('click', onCancel);
-      btnX?.removeEventListener('click', onCancel);
+    if (btnSim) {
+      btnSim.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        responder(true);
+      };
     }
 
-    btnSim?.addEventListener('click', onConfirm);
-    btnNao?.addEventListener('click', onCancel);
-    btnX?.addEventListener('click', onCancel);
+    if (btnNao) {
+      btnNao.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        responder(false);
+      };
+    }
+
+    if (btnX) {
+      btnX.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        responder(false);
+      };
+    }
+
+    modal.onclick = (e) => {
+      if (e.target === modal) {
+        responder(false);
+      }
+    };
 
     abrirModal('modalConfirmacao');
   });

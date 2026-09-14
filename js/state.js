@@ -26,6 +26,13 @@ export function carregarDadosLocais() {
 
   state.produtos = prods ? JSON.parse(prods) : [];
   state.vendas = sales ? JSON.parse(sales) : [];
+
+  // Garante identificador em vendas legadas ou sem ID
+  state.vendas.forEach((v, idx) => {
+    if (!v.id) {
+      v.id = `venda_${Date.now()}_${idx}`;
+    }
+  });
   
   if (cats) {
     try { state.categorias = JSON.parse(cats); } catch (e) {}

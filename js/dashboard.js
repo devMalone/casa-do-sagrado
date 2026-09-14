@@ -40,7 +40,7 @@ export function renderizarDashboard() {
   if (kpiLucro) kpiLucro.innerText = `R$ ${formatarMoedaExibicao(lucro)}`;
   if (resAcum) resAcum.innerText = `R$ ${formatarMoedaExibicao(reservaAcumulada)}`;
   if (sepHoje) sepHoje.innerText = `R$ ${formatarMoedaExibicao(hojeReserva)}`;
-  if (metaTxt) metaTxt.innerText = formatarMoedaExibicao(state.config.tetoReserva);
+  if (metaTxt) metaTxt.innerText = `R$ ${formatarMoedaExibicao(state.config.tetoReserva)}`;
   if (pctTag) pctTag.innerText = `${state.config.percentualReserva}%`;
 
   // Barra de progresso da Reserva

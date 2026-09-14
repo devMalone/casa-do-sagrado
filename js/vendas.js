@@ -120,40 +120,46 @@ export function renderizarHistoricoVendas() {
     return;
   }
 
-  state.vendas.forEach(v => {
+  state.vendas.forEach((v, index) => {
+    if (!v.id) {
+      v.id = `venda_${Date.now()}_${index}`;
+    }
+
     const dataFormatada = new Date(v.created_at).toLocaleDateString('pt-BR', {
       day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
     });
 
     const prodAtual = state.produtos.find(p => p.id === v.produto_id);
     const nomeExibicao = prodAtual ? prodAtual.nome : (v.nome_produto || 'Produto');
+    const metodoPgto = v.metodo_pagamento || 'Outro';
 
     const item = document.createElement('div');
     item.className = 'sale-item';
     item.innerHTML = `
-      <div class="sale-info">
+      <div class="sale-top-row">
         <div class="sale-prod">${v.quantidade}x ${nomeExibicao}</div>
+        <div class="sale-top-right">
+          <span class="sale-val">R$ ${formatarMoedaExibicao(v.valor_total)}</span>
+          <button type="button" class="btn-undo-sale" data-id="${v.id}" data-index="${index}" title="Desfazer / Estornar Venda">
+            <i data-lucide="rotate-ccw" style="width: 13px; height: 13px;"></i>
+          </button>
+        </div>
+      </div>
+      <div class="sale-bottom-row">
         <div class="sale-meta">
           <span>${dataFormatada}</span>
           <span>•</span>
-          <span style="display: inline-flex; align-items: center; gap: 3px;"><i data-lucide="user" style="width: 11px; height: 11px;"></i> ${v.operador}</span>
-          <span>•</span>
-          <span>${v.metodo_pagamento}</span>
+          <span class="sale-operator"><i data-lucide="user" style="width: 11px; height: 11px;"></i> ${v.operador || 'Operador'}</span>
         </div>
-      </div>
-      <div class="sale-right-area">
-        <div class="sale-amount">
-          <div class="sale-val">R$ ${formatarMoedaExibicao(v.valor_total)}</div>
-          <div class="sale-reserve">Reserva: +R$ ${formatarMoedaExibicao(v.valor_reserva_30)}</div>
+        <div class="sale-bottom-right">
+          <span class="sale-pay-badge">${metodoPgto}</span>
+          <span class="sale-reserve">Reserva: +R$ ${formatarMoedaExibicao(v.valor_reserva_30)}</span>
         </div>
-        <button type="button" class="btn-undo-sale" data-id="${v.id}" title="Desfazer / Estornar Venda">
-          <i data-lucide="rotate-ccw" style="width: 13px; height: 13px;"></i>
-        </button>
       </div>
     `;
 
     const btnUndo = item.querySelector('.btn-undo-sale');
-    btnUndo?.addEventListener('click', () => estornarVenda(v.id));
+    btnUndo?.addEventListener('click', () => estornarVenda(v.id, index));
 
     container.appendChild(item);
   });
@@ -161,16 +167,24 @@ export function renderizarHistoricoVendas() {
   refreshIcons();
 }
 
-export async function estornarVenda(vendaId) {
-  const venda = state.vendas.find(v => v.id === vendaId);
-  if (!venda) return;
+export async function estornarVenda(vendaId, indexFallback) {
+  let index = state.vendas.findIndex(v => String(v.id) === String(vendaId));
+  if (index === -1 && typeof indexFallback === 'number' && state.vendas[indexFallback]) {
+    index = indexFallback;
+  }
+  if (index === -1) {
+    mostrarToast('Venda não localizada para estorno.');
+    return;
+  }
 
+  const venda = state.vendas[index];
   const prodAtual = state.produtos.find(p => p.id === venda.produto_id);
   const nomeExibicao = prodAtual ? prodAtual.nome : (venda.nome_produto || 'Produto');
+  const qtdEstorno = parseInt(venda.quantidade, 10) || 1;
 
   const confirmou = await pedirConfirmacao({
     titulo: 'Desfazer Venda?',
-    mensagem: `Deseja realmente desfazer a venda de ${venda.quantidade}x "${nomeExibicao}" (R$ ${formatarMoedaExibicao(venda.valor_total)})? A quantidade será devolvida ao estoque.`,
+    mensagem: `Deseja realmente desfazer a venda de ${qtdEstorno}x "${nomeExibicao}" (R$ ${formatarMoedaExibicao(venda.valor_total)})? A quantidade será devolvida ao estoque.`,
     textoConfirmar: 'Sim, Desfazer Venda',
     perigo: true
   });
@@ -179,7 +193,7 @@ export async function estornarVenda(vendaId) {
 
   // 1. Devolve estoque ao produto
   if (prodAtual) {
-    prodAtual.estoque_atual = (parseInt(prodAtual.estoque_atual, 10) || 0) + venda.quantidade;
+    prodAtual.estoque_atual = (parseInt(prodAtual.estoque_atual, 10) || 0) + qtdEstorno;
     if (state.supabase) {
       state.supabase.from('casa_produtos')
         .update({ estoque_atual: prodAtual.estoque_atual, updated_at: new Date().toISOString() })
@@ -189,21 +203,25 @@ export async function estornarVenda(vendaId) {
   }
 
   // 2. Remove do histórico local
-  state.vendas = state.vendas.filter(v => v.id !== vendaId);
+  state.vendas.splice(index, 1);
   salvarLocal();
 
-  // 3. Remove do banco de dados na nuvem
-  if (state.supabase) {
+  // 3. Remove do banco de dados na nuvem se tiver ID remoto
+  if (state.supabase && venda.id && !String(venda.id).startsWith('venda_')) {
     state.supabase.from('casa_vendas')
       .delete()
-      .eq('id', vendaId)
+      .eq('id', venda.id)
       .catch(err => console.warn('[Sync] Erro ao estornar venda no Supabase:', err));
   }
 
-  // 4. Feedback e re-renderização completa
+  // 4. Feedback tátil e aviso visual
   if (navigator.vibrate) navigator.vibrate(40);
-  mostrarToast(`Venda desfeita! ${venda.quantidade}x "${nomeExibicao}" devolvido ao estoque.`);
+  mostrarToast(`Venda desfeita! ${qtdEstorno}x "${nomeExibicao}" devolvido ao estoque.`);
 
+  // 5. Re-renderiza imediatamente a listagem de vendas
+  renderizarHistoricoVendas();
+
+  // 6. Atualiza dashboard e estoque
   if (onVendaRealizadaCallback) {
     onVendaRealizadaCallback();
   }

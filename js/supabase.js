@@ -13,6 +13,43 @@ export function setAppRenderCallback(fn) {
   appRenderCallback = fn;
 }
 
+export function atualizarUIStatusNuvem(conectado) {
+  const dot = document.getElementById('syncStatusDot');
+  const txt = document.getElementById('statusConexaoTxt');
+  const btn = document.getElementById('btnSalvarSupabase');
+
+  if (conectado) {
+    if (dot) dot.classList.add('online');
+    if (txt) {
+      txt.innerText = 'Conectado em tempo real';
+      txt.style.color = 'var(--success)';
+    }
+    if (btn) {
+      btn.className = 'btn-cancel';
+      btn.style.width = 'auto';
+      btn.style.padding = '0 14px';
+      btn.style.height = '34px';
+      btn.style.fontSize = '12px';
+      btn.innerHTML = '<i data-lucide="power" style="width: 14px; height: 14px;"></i> <span>Desconectar</span>';
+    }
+  } else {
+    if (dot) dot.classList.remove('online');
+    if (txt) {
+      txt.innerText = 'Desconectado';
+      txt.style.color = 'var(--text-muted)';
+    }
+    if (btn) {
+      btn.className = 'btn-main';
+      btn.style.width = 'auto';
+      btn.style.padding = '0 14px';
+      btn.style.height = '34px';
+      btn.style.fontSize = '12px';
+      btn.innerHTML = '<i data-lucide="plug" style="width: 14px; height: 14px;"></i> <span>Conectar</span>';
+    }
+  }
+  refreshIcons();
+}
+
 export function iniciarSupabaseSeConfigurado() {
   const url = localStorage.getItem('casa_supabase_url') || DEFAULT_SUPABASE_URL;
   const key = localStorage.getItem('casa_supabase_key') || DEFAULT_SUPABASE_KEY;
@@ -22,34 +59,52 @@ export function iniciarSupabaseSeConfigurado() {
   if (urlInput) urlInput.value = url;
   if (keyInput) keyInput.value = key;
 
+  // Se o usuário optou por desconectar, respeita a decisão
+  if (localStorage.getItem('casa_supabase_desconectado') === 'true') {
+    atualizarUIStatusNuvem(false);
+    return;
+  }
+
   if (url && key && window.supabase) {
-    try {
-      state.supabase = window.supabase.createClient(url, key);
-      const dot = document.getElementById('syncStatusDot');
-      if (dot) dot.classList.add('online');
-      
-      const txt = document.getElementById('statusConexaoTxt');
-      if (txt) {
-        txt.innerText = 'Conectado em tempo real';
-        txt.style.color = 'var(--success)';
-      }
-      
-      conectarRealtime();
-      baixarDadosIniciaisNuvem();
-    } catch (e) {
-      console.error('[Supabase] Falha ao inicializar:', e);
-      const txt = document.getElementById('statusConexaoTxt');
-      if (txt) {
-        txt.innerText = 'Erro ao conectar';
-        txt.style.color = 'var(--danger)';
-      }
-    }
+    conectarClienteSupabase(url, key);
+  } else {
+    atualizarUIStatusNuvem(false);
   }
 }
 
-export function salvarConfigSupabase() {
-  const url = document.getElementById('cfgSupabaseUrl').value.trim();
-  const key = document.getElementById('cfgSupabaseKey').value.trim();
+function conectarClienteSupabase(url, key) {
+  try {
+    state.supabase = window.supabase.createClient(url, key);
+    atualizarUIStatusNuvem(true);
+    conectarRealtime();
+    baixarDadosIniciaisNuvem();
+  } catch (e) {
+    console.error('[Supabase] Falha ao inicializar:', e);
+    const txt = document.getElementById('statusConexaoTxt');
+    if (txt) {
+      txt.innerText = 'Erro ao conectar';
+      txt.style.color = 'var(--danger)';
+    }
+    atualizarUIStatusNuvem(false);
+  }
+}
+
+export function desconectarSupabase() {
+  if (realtimeChannel) {
+    try {
+      realtimeChannel.unsubscribe();
+    } catch (e) {}
+    realtimeChannel = null;
+  }
+  state.supabase = null;
+  localStorage.setItem('casa_supabase_desconectado', 'true');
+  atualizarUIStatusNuvem(false);
+  mostrarToast('Nuvem desconectada. Operando no modo local.');
+}
+
+export function conectarSupabase() {
+  const url = document.getElementById('cfgSupabaseUrl')?.value.trim() || localStorage.getItem('casa_supabase_url') || DEFAULT_SUPABASE_URL;
+  const key = document.getElementById('cfgSupabaseKey')?.value.trim() || localStorage.getItem('casa_supabase_key') || DEFAULT_SUPABASE_KEY;
 
   if (!url || !key) {
     mostrarToast('Preencha a URL e a Chave do Supabase.');
@@ -58,11 +113,21 @@ export function salvarConfigSupabase() {
 
   localStorage.setItem('casa_supabase_url', url);
   localStorage.setItem('casa_supabase_key', key);
+  localStorage.removeItem('casa_supabase_desconectado');
 
-  fecharModalAtual();
   mostrarToast('Conectando ao Supabase...');
-  iniciarSupabaseSeConfigurado();
+  conectarClienteSupabase(url, key);
 }
+
+export function alternarConexaoSupabase() {
+  if (state.supabase) {
+    desconectarSupabase();
+  } else {
+    conectarSupabase();
+  }
+}
+
+export const salvarConfigSupabase = alternarConexaoSupabase;
 
 export function conectarRealtime() {
   if (!state.supabase) return;
@@ -130,7 +195,7 @@ export async function lancarAtualizacaoGeral() {
       // 1. Grava na nuvem para atualizar quem abrir o app depois
       await state.supabase.from('casa_configuracoes').upsert([{
         chave: 'versao_app',
-        valor: { timestamp, solicitante, versao: 'v11' },
+        valor: { timestamp, solicitante, versao: 'v12' },
         updated_at: new Date().toISOString()
       }]);
 

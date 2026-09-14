@@ -97,10 +97,16 @@ export function salvarConfigReserva() {
   renderizarDashboard();
 
   if (state.supabase) {
-    state.supabase.from('casa_configuracoes').upsert({
-      chave: 'fundo_reserva',
-      valor: state.config,
-      updated_at: new Date().toISOString()
-    }).catch(err => console.warn('[Sync] Erro ao sincronizar meta de reserva:', err));
+    (async () => {
+      try {
+        await state.supabase.from('casa_configuracoes').upsert({
+          chave: 'fundo_reserva',
+          valor: state.config,
+          updated_at: new Date().toISOString()
+        });
+      } catch (err) {
+        console.warn('[Sync] Erro ao sincronizar meta de reserva:', err);
+      }
+    })();
   }
 }

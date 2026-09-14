@@ -170,8 +170,13 @@ export async function excluirProdutoAtual() {
     renderizarEstoque();
 
     if (state.supabase) {
-      state.supabase.from('casa_produtos').delete().eq('id', id)
-        .catch(err => console.warn('[Sync] Erro ao deletar produto:', err));
+      (async () => {
+        try {
+          await state.supabase.from('casa_produtos').delete().eq('id', id);
+        } catch (err) {
+          console.warn('[Sync] Erro ao deletar produto no Supabase:', err);
+        }
+      })();
     }
   }
 }
@@ -233,13 +238,18 @@ export function salvarProduto() {
   }
 
   if (state.supabase) {
-    const itemSalvo = id ? state.produtos.find(prod => prod.id === id) : state.produtos[0];
-    state.supabase.from('casa_produtos').upsert([itemSalvo])
-      .catch(err => console.warn('[Sync] Erro upsert produto:', err));
-
-    if (id) {
-      state.supabase.from('casa_vendas').update({ nome_produto: nome }).eq('produto_id', id)
-        .catch(err => console.warn('[Sync] Erro atualizar nome em vendas:', err));
-    }
+    (async () => {
+      try {
+        const itemSalvo = id ? state.produtos.find(prod => prod.id === id) : state.produtos[0];
+        if (itemSalvo) {
+          await state.supabase.from('casa_produtos').upsert([itemSalvo]);
+        }
+        if (id) {
+          await state.supabase.from('casa_vendas').update({ nome_produto: nome }).eq('produto_id', id);
+        }
+      } catch (err) {
+        console.warn('[Sync] Erro ao sincronizar produto no Supabase:', err);
+      }
+    })();
   }
 }

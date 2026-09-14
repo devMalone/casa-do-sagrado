@@ -89,16 +89,20 @@ export async function confirmarVendaFinal() {
   
   if (onVendaRealizadaCallback) onVendaRealizadaCallback();
 
-  // 3. Sincroniza com Supabase
+  // 3. Sincroniza com Supabase em background protegido
   if (state.supabase) {
-    state.supabase.rpc('casa_dar_baixa_venda', {
-      p_produto_id: p.id,
-      p_qtd: qtd
-    }).catch(err => console.warn('[Sync] Baixa nuvem erro:', err));
-
-    state.supabase.from('casa_vendas').insert([novaVenda])
-      .then(() => console.log('[Sync] Venda sincronizada com sucesso'))
-      .catch(err => console.warn('[Sync] Venda nuvem erro:', err));
+    (async () => {
+      try {
+        await state.supabase.rpc('casa_dar_baixa_venda', {
+          p_produto_id: p.id,
+          p_qtd: qtd
+        });
+        await state.supabase.from('casa_vendas').insert([novaVenda]);
+        console.log('[Sync] Venda sincronizada com sucesso');
+      } catch (err) {
+        console.warn('[Sync] Erro na sincronização da venda:', err);
+      }
+    })();
   }
 }
 
@@ -237,35 +241,40 @@ export async function executarEstorno(vendaId, indexFallback, itemElement) {
     itemElement.classList.add('removing');
   }
 
-  // 2. Devolve estoque ao produto localmente
+  // 2. ATUALIZAÇÃO LOCAL SÍNCRONA E INFALÍVEL (Local-First Real)
   if (prodAtual) {
     prodAtual.estoque_atual = (parseInt(prodAtual.estoque_atual, 10) || 0) + qtdEstorno;
-    if (state.supabase) {
-      state.supabase.from('casa_produtos')
-        .update({ estoque_atual: prodAtual.estoque_atual, updated_at: new Date().toISOString() })
-        .eq('id', prodAtual.id)
-        .catch(err => console.warn('[Sync] Erro ao devolver estoque no Supabase:', err));
-    }
   }
-
-  // 3. Remove do histórico local
   state.vendas.splice(index, 1);
-  salvarLocal();
+  salvarLocal(); // Salvo no localStorage imediatamente
 
-  // 4. Feedback tátil e aviso na tela
+  // 3. Feedback tátil e aviso visual
   if (navigator.vibrate) navigator.vibrate(40);
-  mostrarToast(`Estorno concluído! ${qtdEstorno}x "${nomeExibicao}" devolvido ao estoque.`);
+  mostrarToast(`Estorno concluído! +${qtdEstorno} "${nomeExibicao}" voltou ao estoque.`);
 
-  // 5. Remove da nuvem em segundo plano
-  removerVendaSupabase(venda);
-
-  // 6. Atualiza contador e dashboard sem atraso
+  // 4. Atualiza todas as telas (Estoque, Histórico e Dashboard)
   setTimeout(() => {
     renderizarHistoricoVendas();
     if (onVendaRealizadaCallback) {
       onVendaRealizadaCallback();
     }
-  }, 220);
+  }, 180);
+
+  // 5. Sincronização assíncrona com o Supabase protegida contra exceções
+  if (state.supabase) {
+    (async () => {
+      try {
+        if (prodAtual) {
+          await state.supabase.from('casa_produtos')
+            .update({ estoque_atual: prodAtual.estoque_atual, updated_at: new Date().toISOString() })
+            .eq('id', prodAtual.id);
+        }
+        await removerVendaSupabase(venda);
+      } catch (err) {
+        console.warn('[Sync] Falha na sincronização do estorno no Supabase:', err);
+      }
+    })();
+  }
 }
 
 export async function estornarVenda(vendaId, indexFallback) {
@@ -289,34 +298,42 @@ export async function limparTodoHistoricoVendas() {
 
   if (!confirmou) return;
 
-  // 1. Restaura estoque para os produtos vendidos
-  state.vendas.forEach(v => {
+  const vendasParaRestaurar = [...state.vendas];
+
+  // 1. Restaura estoque para os produtos vendidos localmente
+  vendasParaRestaurar.forEach(v => {
     const prod = state.produtos.find(p => p.id === v.produto_id);
     if (prod) {
       prod.estoque_atual = (parseInt(prod.estoque_atual, 10) || 0) + (parseInt(v.quantidade, 10) || 1);
-      if (state.supabase) {
-        state.supabase.from('casa_produtos')
-          .update({ estoque_atual: prod.estoque_atual, updated_at: new Date().toISOString() })
-          .eq('id', prod.id)
-          .catch(err => console.warn('[Sync] Erro ao restaurar estoque:', err));
-      }
     }
   });
 
-  // 2. Remove da nuvem Supabase
-  if (state.supabase) {
-    state.supabase.from('casa_vendas').delete().neq('id', '00000000-0000-0000-0000-000000000000').catch(() => {});
-  }
-
-  // 3. Limpa localmente
+  // 2. Limpa histórico local e salva
   state.vendas = [];
   salvarLocal();
 
+  // 3. Feedback e atualização imediata das telas
   if (navigator.vibrate) navigator.vibrate(50);
-  mostrarToast('Histórico de vendas resetado e estoques restaurados!');
+  mostrarToast('Histórico de vendas zerado e todos os estoques restaurados!');
 
   renderizarHistoricoVendas();
   if (onVendaRealizadaCallback) {
     onVendaRealizadaCallback();
+  }
+
+  // 4. Sincroniza com a nuvem Supabase em background protegido
+  if (state.supabase) {
+    (async () => {
+      try {
+        for (const prod of state.produtos) {
+          await state.supabase.from('casa_produtos')
+            .update({ estoque_atual: prod.estoque_atual, updated_at: new Date().toISOString() })
+            .eq('id', prod.id);
+        }
+        await state.supabase.from('casa_vendas').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      } catch (err) {
+        console.warn('[Sync] Falha ao sincronizar reset de vendas na nuvem:', err);
+      }
+    })();
   }
 }

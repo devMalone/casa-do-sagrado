@@ -96,11 +96,17 @@ export function salvarCategorias() {
   if (onCategoriaAlteradaCallback) onCategoriaAlteradaCallback();
 
   if (state.supabase) {
-    state.supabase.from('casa_configuracoes').upsert({
-      chave: 'categorias',
-      valor: state.categorias,
-      updated_at: new Date().toISOString()
-    }).catch(err => console.warn('[Sync] Erro ao sincronizar categorias na nuvem:', err));
+    (async () => {
+      try {
+        await state.supabase.from('casa_configuracoes').upsert({
+          chave: 'categorias',
+          valor: state.categorias,
+          updated_at: new Date().toISOString()
+        });
+      } catch (err) {
+        console.warn('[Sync] Erro ao sincronizar categorias na nuvem:', err);
+      }
+    })();
   }
 }
 

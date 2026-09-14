@@ -1,4 +1,4 @@
-const CACHE_NAME = 'casa-sagrado-v12';
+const CACHE_NAME = 'casa-sagrado-v13';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -24,10 +24,20 @@ const ASSETS_TO_CACHE = [
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE).catch(() => {
-        return cache.add('./index.html');
+    caches.open(CACHE_NAME).then(async (cache) => {
+      const fetchPromises = ASSETS_TO_CACHE.map(async (url) => {
+        try {
+          // Bypassa cache HTTP do navegador no momento da instalação
+          const req = new Request(url, { cache: 'reload' });
+          const res = await fetch(req);
+          if (res.ok) {
+            await cache.put(url, res);
+          }
+        } catch (e) {
+          console.warn('[SW] Falha ao cachear asset:', url, e);
+        }
       });
+      await Promise.all(fetchPromises);
     })
   );
   self.skipWaiting();
@@ -53,24 +63,51 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Network-First para navegação, HTML, scripts JS e estilos CSS
+  const isCodeAsset = event.request.mode === 'navigate' || 
+                      event.request.url.endsWith('.html') || 
+                      event.request.url.includes('/js/') ||
+                      event.request.url.includes('/css/') ||
+                      event.request.url.endsWith('/');
+
+  if (isCodeAsset) {
+    event.respondWith(
+      fetch(event.request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const responseClone = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, responseClone);
+            });
+          }
+          return networkResponse;
+        })
+        .catch(() => {
+          return caches.match(event.request).then((cached) => {
+            if (cached) return cached;
+            if (event.request.mode === 'navigate') {
+              return caches.match('./index.html');
+            }
+          });
+        })
+    );
+    return;
+  }
+
+  // Cache-First com fallback para rede para imagens e bibliotecas externas
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       if (cachedResponse) {
         return cachedResponse;
       }
       return fetch(event.request).then((networkResponse) => {
-        if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
-          return networkResponse;
+        if (networkResponse && networkResponse.status === 200) {
+          const responseToCache = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseToCache);
+          });
         }
-        const responseToCache = networkResponse.clone();
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, responseToCache);
-        });
         return networkResponse;
-      }).catch(() => {
-        if (event.request.mode === 'navigate') {
-          return caches.match('./index.html');
-        }
       });
     })
   );

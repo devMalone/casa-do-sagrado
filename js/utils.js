@@ -57,32 +57,33 @@ export function refreshIcons() {
 
 export async function forcarAtualizacaoLocal(mostrarAviso = true) {
   if (mostrarAviso) {
-    mostrarToast('Limpando cache e forçando atualização...');
+    mostrarToast('Atualizando aplicação para a versão mais recente...');
   }
 
   try {
-    if ('serviceWorker' in navigator) {
-      const registrations = await navigator.serviceWorker.getRegistrations();
-      for (const registration of registrations) {
-        await registration.unregister();
-      }
+    // 1. Limpa todas as instâncias antigas de cache do CacheStorage
+    if ('caches' in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
     }
 
-    if ('caches' in window) {
-      const cacheNames = await caches.keys();
-      for (const name of cacheNames) {
-        await caches.delete(name);
+    // 2. Notifica o Service Worker para buscar versão atualizada imediatamente
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      for (const reg of regs) {
+        await reg.update();
       }
     }
   } catch (err) {
-    console.warn('[Cache Purge] Erro ao limpar:', err);
+    console.warn('[Update] Erro ao atualizar cache:', err);
   }
 
+  // 3. Força recarregamento com parâmetro timestamp para ignorar cache de disco
   setTimeout(() => {
-    const url = new URL(window.location.href);
-    url.searchParams.set('reload', Date.now().toString());
-    window.location.replace(url.toString());
-  }, 400);
+    const cleanUrl = new URL(window.location.origin + window.location.pathname);
+    cleanUrl.searchParams.set('v', Date.now().toString());
+    window.location.href = cleanUrl.toString();
+  }, 250);
 }
 
 export function pedirConfirmacao({ titulo = 'Confirmação', mensagem = 'Deseja continuar?', textoConfirmar = 'Confirmar', perigo = true } = {}) {

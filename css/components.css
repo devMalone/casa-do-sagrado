@@ -668,12 +668,13 @@
 .calc-card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 16px;
+  border-radius: 16px;
+  padding: 16px 16px 20px 16px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin-bottom: 14px;
+  gap: 13px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
 }
 
 .calc-result-box {
@@ -884,36 +885,75 @@
 .subtabs-bar {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: 6px;
+  margin-bottom: 14px;
+  background: #0f172a;
+  padding: 4px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .subtab-btn {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  color: var(--text-muted);
-  height: 40px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: #94a3b8;
+  height: 38px;
   border-radius: 10px;
   font-size: 12px;
   font-weight: 600;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 7px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .subtab-btn:hover {
-  background: var(--surface-hover);
-  color: #f1f5f9;
+  color: #e2e8f0;
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .subtab-btn.active {
-  background: rgba(245, 158, 11, 0.1);
-  border-color: var(--primary);
-  color: var(--primary);
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(245, 158, 11, 0.08) 100%);
+  border-color: rgba(245, 158, 11, 0.5);
+  color: #fbbf24;
   font-weight: 700;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25), inset 0 1px 1px rgba(245, 158, 11, 0.2);
+}
+
+.subtab-btn i {
+  flex-shrink: 0;
+}
+
+.subtab-btn.active i {
+  color: #f59e0b;
+}
+
+/* Titles and Headers */
+.tool-section-header {
+  margin-bottom: 14px;
+  padding: 0 2px;
+}
+
+.tool-card-title {
+  font-size: 14.5px;
+  font-weight: 800;
+  color: #f8fafc;
+  line-height: 1.35;
+  margin: 0 0 4px 0;
+  white-space: normal;
+  word-break: break-word;
+  letter-spacing: -0.01em;
+}
+
+.tool-card-subtitle {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.45;
+  margin: 0;
+  white-space: normal;
 }
 
 .subpanel-view {
@@ -922,15 +962,6 @@
 
 .subpanel-view.active {
   display: block;
-}
-
-/* Curva ABC Styles */
-.abc-card-header {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 16px;
-  margin-bottom: 12px;
 }
 
 .curva-abc-list {

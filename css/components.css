@@ -831,6 +831,201 @@
   background: var(--primary-glow);
 }
 
-.btn-broadcast-action:active {
-  background: var(--primary-glow);
+/* =========================================
+   CENTRAL DE FERRAMENTAS & CURVA ABC
+   ========================================= */
+.subtabs-bar {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.subtab-btn {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  height: 40px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.subtab-btn:hover {
+  background: var(--surface-hover);
+  color: #f1f5f9;
+}
+
+.subtab-btn.active {
+  background: rgba(245, 158, 11, 0.1);
+  border-color: var(--primary);
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.subpanel-view {
+  display: none;
+}
+
+.subpanel-view.active {
+  display: block;
+}
+
+/* Curva ABC Styles */
+.abc-card-header {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.curva-abc-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.abc-group-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+}
+
+.abc-group-card.curva-a {
+  border-left: 4px solid #38bdf8;
+}
+
+.abc-group-card.curva-b {
+  border-left: 4px solid #f59e0b;
+}
+
+.abc-group-card.curva-c {
+  border-left: 4px solid #a855f7;
+}
+
+.abc-group-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.abc-badge {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.curva-a .abc-badge { color: #38bdf8; }
+.curva-b .abc-badge { color: #f59e0b; }
+.curva-c .abc-badge { color: #c084fc; }
+
+.btn-group-apply {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-muted);
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.btn-group-apply:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f1f5f9;
+}
+
+.abc-group-desc {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  line-height: 1.45;
+  margin: 0;
+}
+
+.abc-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding-top: 8px;
+}
+
+.abc-item-row {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 8px 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.abc-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.abc-item-name {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #f3f4f6;
+}
+
+.abc-item-meta {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.abc-item-meta strong {
+  color: #e2e8f0;
+}
+
+.abc-item-pct {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.btn-apply-margin {
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: var(--primary);
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.btn-apply-margin:hover {
+  background: var(--primary);
+  color: #0b0f17;
+}
+
+.btn-apply-margin:active {
+  transform: scale(0.95);
 }

@@ -8,6 +8,7 @@ import { renderizarEstoque, filtrarProdutos, abrirModalProduto, salvarProduto, s
 import { iniciarVendaRapida, ajustarQtdVenda, selecionarMetodoPgto, confirmarVendaFinal, renderizarHistoricoVendas, setOnVendaRealizadaCallback } from './vendas.js';
 import { renderizarDashboard, abrirModalConfigReserva, salvarConfigReserva } from './dashboard.js';
 import { recalcularMarkup, copiarPrecoParaNovoProduto } from './markup.js';
+import { renderizarCurvaABC, alternarSubAbaFerramentas } from './curva_abc.js';
 
 // --- CICLO DE VIDA E INICIALIZAÇÃO ---
 document.addEventListener('DOMContentLoaded', () => {
@@ -67,6 +68,7 @@ function renderizarTudo() {
   renderizarEstoque();
   renderizarDashboard();
   renderizarHistoricoVendas();
+  renderizarCurvaABC();
   refreshIcons();
 }
 
@@ -127,6 +129,10 @@ function mudarAba(abaId, btn) {
 
   if (abaId === 'dashboard') renderizarDashboard();
   if (abaId === 'vendas') renderizarHistoricoVendas();
+  if (abaId === 'ferramentas') {
+    renderizarCurvaABC();
+    recalcularMarkup();
+  }
   refreshIcons();
 }
 
@@ -236,6 +242,13 @@ function vincularEventosGlobais() {
   calcTaxa?.addEventListener('input', recalcularMarkup);
   calcMargem?.addEventListener('input', recalcularMarkup);
   document.getElementById('btnCopiarMarkupParaProduto')?.addEventListener('click', copiarPrecoParaNovoProduto);
+ 
+  // Sub-abas da Central de Ferramentas
+  document.querySelectorAll('.subtab-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      alternarSubAbaFerramentas(this.getAttribute('data-subtab'));
+    });
+  });
 
   // Navegação
   document.querySelectorAll('.nav-btn').forEach(btn => {

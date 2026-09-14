@@ -136,59 +136,90 @@
 
     </section>
 
-    <!-- ABA 4: CALCULADORA DE MARKUP DIVISOR -->
-    <section id="tab-calc" class="tab-view">
-      <div class="calc-card">
-        <div class="brand-title" style="margin-bottom: 4px;">Ficha Técnica & Markup Divisor</div>
-        <p style="font-size: 12.5px; color: var(--text-muted);">Calcule o preço de venda para kits e produtos com precisão de centavos cobrindo taxas e garantindo a reserva.</p>
-        
-        <div class="form-group" style="margin-top: 10px;">
-          <label class="form-label">Custo Total dos Insumos (R$)</label>
-          <input type="text" id="calcCusto" name="calc_c_input" class="form-input" inputmode="numeric" placeholder="R$ 0,00" autocomplete="off" autocorrect="off" spellcheck="false" data-form-type="other">
-        </div>
-
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-          <div class="form-group">
-            <label class="form-label">Taxa Cartão (%)</label>
-            <input type="number" id="calcTaxa" name="calc_t_input" class="form-input" value="3.0" step="0.5" autocomplete="off" autocorrect="off" spellcheck="false" data-form-type="other">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Margem Desejada (%)</label>
-            <input type="number" id="calcMargem" name="calc_m_input" class="form-input" value="60" step="1" autocomplete="off" autocorrect="off" spellcheck="false" data-form-type="other">
-          </div>
-        </div>
-
-        <div class="calc-alert" id="calcAlert"></div>
-
-        <div class="calc-result-box" id="calcResultBox">
-          <div class="calc-metric-highlight">
-            <div class="calc-metric-label">Preço de Venda Sugerido</div>
-            <div style="display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;">
-              <span class="calc-metric-value" id="calcPrecoSugerido">R$ 0,00</span>
-              <span id="calcPrecoArredondado" style="font-size: 12.5px; color: var(--text-muted); font-weight: 500;"></span>
-            </div>
-          </div>
-          <div class="calc-details-grid">
-            <div class="calc-detail-card">
-              <div class="calc-detail-header">
-                <span class="calc-detail-label">Lucro Líquido</span>
-              </div>
-              <div class="calc-detail-value green" id="calcLucroUnitario">R$ 0,00</div>
-            </div>
-            <div class="calc-detail-card">
-              <div class="calc-detail-header">
-                <span class="calc-detail-label">Fundo Reserva</span>
-                <span class="calc-detail-badge" id="calcReservaPctTag">30%</span>
-              </div>
-              <div class="calc-detail-value amber" id="calcReservaUnitaria">R$ 0,00</div>
-            </div>
-          </div>
-        </div>
-
-        <button class="btn-main" id="btnCopiarMarkupParaProduto">
-          <i data-lucide="plus"></i> Cadastrar como Produto
+    <!-- ABA 4: CENTRAL DE FERRAMENTAS & CONSULTORIA COMERCIAL -->
+    <section id="tab-ferramentas" class="tab-view">
+      
+      <!-- Subtabs de Navegação Interna -->
+      <div class="subtabs-bar">
+        <button type="button" class="subtab-btn active" id="btnSubtabMarkup" data-subtab="markup">
+          <i data-lucide="calculator" style="width: 14px; height: 14px;"></i>
+          <span>Ficha Técnica (Markup)</span>
+        </button>
+        <button type="button" class="subtab-btn" id="btnSubtabCurvaABC" data-subtab="curva-abc">
+          <i data-lucide="trending-up" style="width: 14px; height: 14px;"></i>
+          <span>Curva ABC (Margens)</span>
         </button>
       </div>
+
+      <!-- SUB-PAINEL 1: CALCULADORA DE MARKUP DIVISOR -->
+      <div id="subpanel-markup" class="subpanel-view active">
+        <div class="calc-card">
+          <div class="brand-title" style="margin-bottom: 4px;">Ficha Técnica & Markup Divisor</div>
+          <p style="font-size: 12.5px; color: var(--text-muted);">Calcule o preço de venda para kits e produtos com precisão de centavos cobrindo taxas e garantindo a reserva.</p>
+          
+          <div class="form-group" style="margin-top: 10px;">
+            <label class="form-label">Custo Total dos Insumos (R$)</label>
+            <input type="text" id="calcCusto" name="calc_c_input" class="form-input" inputmode="numeric" placeholder="R$ 0,00" autocomplete="off" autocorrect="off" spellcheck="false" data-form-type="other">
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div class="form-group">
+              <label class="form-label">Taxa Cartão (%)</label>
+              <input type="number" id="calcTaxa" name="calc_t_input" class="form-input" value="3.0" step="0.5" autocomplete="off" autocorrect="off" spellcheck="false" data-form-type="other">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Margem Desejada (%)</label>
+              <input type="number" id="calcMargem" name="calc_m_input" class="form-input" value="60" step="1" autocomplete="off" autocorrect="off" spellcheck="false" data-form-type="other">
+            </div>
+          </div>
+
+          <div class="calc-alert" id="calcAlert"></div>
+
+          <div class="calc-result-box" id="calcResultBox">
+            <div class="calc-metric-highlight">
+              <div class="calc-metric-label">Preço de Venda Sugerido</div>
+              <div style="display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;">
+                <span class="calc-metric-value" id="calcPrecoSugerido">R$ 0,00</span>
+                <span id="calcPrecoArredondado" style="font-size: 12.5px; color: var(--text-muted); font-weight: 500;"></span>
+              </div>
+            </div>
+            <div class="calc-details-grid">
+              <div class="calc-detail-card">
+                <div class="calc-detail-header">
+                  <span class="calc-detail-label">Lucro Líquido</span>
+                </div>
+                <div class="calc-detail-value green" id="calcLucroUnitario">R$ 0,00</div>
+              </div>
+              <div class="calc-detail-card">
+                <div class="calc-detail-header">
+                  <span class="calc-detail-label">Fundo Reserva</span>
+                  <span class="calc-detail-badge" id="calcReservaPctTag">30%</span>
+                </div>
+                <div class="calc-detail-value amber" id="calcReservaUnitaria">R$ 0,00</div>
+              </div>
+            </div>
+          </div>
+
+          <button class="btn-main" id="btnCopiarMarkupParaProduto">
+            <i data-lucide="plus"></i> Cadastrar como Produto
+          </button>
+        </div>
+      </div>
+
+      <!-- SUB-PAINEL 2: CONSULTORIA & MATRIZ CURVA ABC -->
+      <div id="subpanel-curva-abc" class="subpanel-view">
+        <div class="abc-card-header">
+          <div class="brand-title" style="margin-bottom: 4px;">Matriz Curva ABC & Consultoria de Margens</div>
+          <p style="font-size: 12.5px; color: var(--text-muted);">
+            Diretrizes estratégicas de precificação por família de produtos. Toque em qualquer margem para aplicá-la diretamente na calculadora.
+          </p>
+        </div>
+
+        <div id="curvaAbcContainer" class="curva-abc-list">
+          <!-- Injetado dinamicamente via curva_abc.js -->
+        </div>
+      </div>
+
     </section>
 
   </main>
@@ -212,9 +243,9 @@
       <i data-lucide="pie-chart"></i>
       <span>Painel</span>
     </button>
-    <button class="nav-btn" data-tab="calc">
-      <i data-lucide="calculator"></i>
-      <span>Markup</span>
+    <button class="nav-btn" data-tab="ferramentas">
+      <i data-lucide="wrench"></i>
+      <span>Ferramentas</span>
     </button>
   </nav>
 

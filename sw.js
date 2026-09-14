@@ -1,4 +1,4 @@
-const CACHE_NAME = 'casa-sagrado-v10';
+const CACHE_NAME = 'casa-sagrado-v11';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -17,6 +17,7 @@ const ASSETS_TO_CACHE = [
   './js/vendas.js',
   './js/dashboard.js',
   './js/markup.js',
+  './js/curva_abc.js',
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',
   'https://unpkg.com/lucide@latest'
 ];

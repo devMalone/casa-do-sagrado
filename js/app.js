@@ -84,10 +84,6 @@ function abrirModalOperador() {
   if (input) {
     input.value = state.operador || '';
   }
-  const btnClose = document.getElementById('btnFecharModalOperador');
-  const btnManter = document.getElementById('btnManterOperador');
-  if (btnClose) btnClose.style.display = state.operador ? 'flex' : 'none';
-  if (btnManter) btnManter.style.display = state.operador ? 'block' : 'none';
   abrirModal('modalOnboarding');
 }
 
@@ -139,7 +135,6 @@ function vincularEventosGlobais() {
   // Operador
   document.getElementById('btnOperadorAtual')?.addEventListener('click', abrirModalOperador);
   document.getElementById('btnSalvarOperador')?.addEventListener('click', confirmarOperadorDigitado);
-  document.getElementById('btnManterOperador')?.addEventListener('click', fecharModalAtual);
   document.getElementById('btnFecharModalOperador')?.addEventListener('click', fecharModalAtual);
 
   // Nuvem / Supabase & Atualizações
@@ -252,5 +247,14 @@ function vincularEventosGlobais() {
   // Fechar modais com botão X
   document.querySelectorAll('.modal-close-btn').forEach(btn => {
     btn.addEventListener('click', fecharModalAtual);
+  });
+
+  // Fechar modais ao clicar no fundo (overlay)
+  document.querySelectorAll('.modal-overlay').forEach(overlay => {
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) {
+        fecharModalAtual();
+      }
+    });
   });
 }

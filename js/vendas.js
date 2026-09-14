@@ -1,7 +1,7 @@
 // js/vendas.js — Registro de Vendas Rápidas e Histórico
 
 import { state, salvarLocal } from './state.js';
-import { formatarMoedaExibicao, mostrarToast, abrirModal, fecharModalAtual, refreshIcons } from './utils.js';
+import { formatarMoedaExibicao, mostrarToast, abrirModal, fecharModalAtual, refreshIcons, pedirConfirmacao } from './utils.js';
 
 let onVendaRealizadaCallback = null;
 
@@ -141,13 +141,70 @@ export function renderizarHistoricoVendas() {
           <span>${v.metodo_pagamento}</span>
         </div>
       </div>
-      <div class="sale-amount">
-        <div class="sale-val">R$ ${formatarMoedaExibicao(v.valor_total)}</div>
-        <div class="sale-reserve">Reserva: +R$ ${formatarMoedaExibicao(v.valor_reserva_30)}</div>
+      <div class="sale-right-area">
+        <div class="sale-amount">
+          <div class="sale-val">R$ ${formatarMoedaExibicao(v.valor_total)}</div>
+          <div class="sale-reserve">Reserva: +R$ ${formatarMoedaExibicao(v.valor_reserva_30)}</div>
+        </div>
+        <button type="button" class="btn-undo-sale" data-id="${v.id}" title="Desfazer / Estornar Venda">
+          <i data-lucide="rotate-ccw" style="width: 13px; height: 13px;"></i>
+        </button>
       </div>
     `;
+
+    const btnUndo = item.querySelector('.btn-undo-sale');
+    btnUndo?.addEventListener('click', () => estornarVenda(v.id));
+
     container.appendChild(item);
   });
 
   refreshIcons();
+}
+
+export async function estornarVenda(vendaId) {
+  const venda = state.vendas.find(v => v.id === vendaId);
+  if (!venda) return;
+
+  const prodAtual = state.produtos.find(p => p.id === venda.produto_id);
+  const nomeExibicao = prodAtual ? prodAtual.nome : (venda.nome_produto || 'Produto');
+
+  const confirmou = await pedirConfirmacao({
+    titulo: 'Desfazer Venda?',
+    mensagem: `Deseja realmente desfazer a venda de ${venda.quantidade}x "${nomeExibicao}" (R$ ${formatarMoedaExibicao(venda.valor_total)})? A quantidade será devolvida ao estoque.`,
+    textoConfirmar: 'Sim, Desfazer Venda',
+    perigo: true
+  });
+
+  if (!confirmou) return;
+
+  // 1. Devolve estoque ao produto
+  if (prodAtual) {
+    prodAtual.estoque_atual = (parseInt(prodAtual.estoque_atual, 10) || 0) + venda.quantidade;
+    if (state.supabase) {
+      state.supabase.from('casa_produtos')
+        .update({ estoque_atual: prodAtual.estoque_atual, updated_at: new Date().toISOString() })
+        .eq('id', prodAtual.id)
+        .catch(err => console.warn('[Sync] Erro ao devolver estoque no Supabase:', err));
+    }
+  }
+
+  // 2. Remove do histórico local
+  state.vendas = state.vendas.filter(v => v.id !== vendaId);
+  salvarLocal();
+
+  // 3. Remove do banco de dados na nuvem
+  if (state.supabase) {
+    state.supabase.from('casa_vendas')
+      .delete()
+      .eq('id', vendaId)
+      .catch(err => console.warn('[Sync] Erro ao estornar venda no Supabase:', err));
+  }
+
+  // 4. Feedback e re-renderização completa
+  if (navigator.vibrate) navigator.vibrate(40);
+  mostrarToast(`Venda desfeita! ${venda.quantidade}x "${nomeExibicao}" devolvido ao estoque.`);
+
+  if (onVendaRealizadaCallback) {
+    onVendaRealizadaCallback();
+  }
 }

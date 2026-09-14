@@ -586,6 +586,37 @@
   color: var(--primary);
 }
 
+.sale-right-area {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn-undo-sale {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  color: var(--text-muted);
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.btn-undo-sale:hover {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.35);
+  color: var(--danger);
+}
+
+.btn-undo-sale:active {
+  transform: scale(0.92);
+}
+
 /* Calculator Card */
 .calc-card {
   background: var(--surface);

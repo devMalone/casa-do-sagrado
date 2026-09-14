@@ -30,6 +30,10 @@
       </div>
     </div>
     <div class="top-actions">
+      <button class="install-pill-btn" id="btnInstalarApp" style="display: none;" title="Instalar Aplicativo">
+        <i data-lucide="download" style="width: 13px; height: 13px;"></i>
+        <span>Instalar</span>
+      </button>
       <div class="operator-pill" id="btnOperadorAtual" title="Alternar Operador">
         <span class="operator-avatar" id="avatarInitial">O</span>
         <span class="operator-name" id="labelOperador">Operador</span>
@@ -454,6 +458,27 @@
           <button class="btn-main" id="btnSalvarSupabase" style="width: auto; padding: 0 14px; height: 34px; font-size: 12px;">
             <i data-lucide="plug"></i> Conectar
           </button>
+        </div>
+
+        <!-- Controle de Versão, Cache e Atualização Remota -->
+        <div style="border-top: 1px solid var(--border); padding-top: 12px; margin-top: 8px;">
+          <div style="font-size: 12.5px; font-weight: 700; color: var(--text); margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+            <i data-lucide="refresh-cw" style="width: 14px; height: 14px; color: var(--primary);"></i>
+            <span>Controle de Versão & Cache</span>
+          </div>
+          <p style="font-size: 11.5px; color: var(--text-muted); margin-bottom: 10px;">
+            Força o navegador a buscar os arquivos novos no GitHub Pages sem apagar seus dados de vendas e estoque.
+          </p>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <button type="button" class="btn-secondary-action" id="btnForcarUpdateLocal">
+              <i data-lucide="rotate-ccw" style="width: 14px; height: 14px;"></i>
+              <span>Atualizar Este Aparelho (Limpar Cache)</span>
+            </button>
+            <button type="button" class="btn-broadcast-action" id="btnLancarUpdateGeral">
+              <i data-lucide="radio" style="width: 14px; height: 14px;"></i>
+              <span>Lançar Atualização Geral (Atualizar Todos os Sócios)</span>
+            </button>
+          </div>
         </div>
       </div>
       <div class="modal-footer" style="flex-direction: column;">

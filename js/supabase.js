@@ -1,12 +1,13 @@
 // js/supabase.js — Integração com Nuvem Supabase e WebSocket Realtime
 
 import { state, salvarLocal } from './state.js';
-import { mostrarToast, fecharModalAtual, refreshIcons } from './utils.js';
+import { mostrarToast, fecharModalAtual, refreshIcons, pedirConfirmacao, forcarAtualizacaoLocal } from './utils.js';
 
 export const DEFAULT_SUPABASE_URL = 'https://gzkfzgbysodflayeejgy.supabase.co';
 export const DEFAULT_SUPABASE_KEY = 'sb_publishable_Pineihb_QYU9SoOKWfa37g_11PXYZR9';
 
 let appRenderCallback = null;
+let realtimeChannel = null;
 
 export function setAppRenderCallback(fn) {
   appRenderCallback = fn;
@@ -66,13 +67,23 @@ export function salvarConfigSupabase() {
 export function conectarRealtime() {
   if (!state.supabase) return;
 
-  state.supabase
-    .channel('casa-sagrado-channel')
+  realtimeChannel = state.supabase.channel('casa-sagrado-channel');
+
+  realtimeChannel
     .on('postgres_changes', { event: '*', schema: 'public', table: 'casa_produtos' }, payload => {
       sincronizarProdutoRealtime(payload);
     })
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'casa_vendas' }, payload => {
       sincronizarVendaRealtime(payload.new);
+    })
+    // Broadcast em tempo real para forçar atualização em massa em todos os aparelhos
+    .on('broadcast', { event: 'comando_forcar_update' }, async (event) => {
+      const solicitante = event.payload?.solicitante || 'Administrador';
+      console.log('[Realtime] Comando remoto de atualização recebido de:', solicitante);
+      mostrarToast(`Atualização lançada por ${solicitante}! Atualizando aplicativo...`);
+      setTimeout(async () => {
+        await forcarAtualizacaoLocal(false);
+      }, 1500);
     })
     .subscribe();
 }
@@ -99,9 +110,67 @@ function sincronizarVendaRealtime(novaVenda) {
   }
 }
 
+export async function lancarAtualizacaoGeral() {
+  const confirmou = await pedirConfirmacao({
+    titulo: 'Lançar Atualização Geral',
+    mensagem: 'Deseja disparar uma limpeza de cache e atualização para todos os dispositivos conectados? O app de todos os sócios (inclusive da Maria) será atualizado na versão mais recente.',
+    textoConfirmar: 'Sim, atualizar todos',
+    perigo: false
+  });
+
+  if (!confirmou) return;
+
+  mostrarToast('Disparando atualização para os dispositivos...');
+
+  const timestamp = Date.now();
+  const solicitante = state.operador || 'Operador';
+
+  if (state.supabase) {
+    try {
+      // 1. Grava na nuvem para atualizar quem abrir o app depois
+      await state.supabase.from('casa_configuracoes').upsert([{
+        chave: 'versao_app',
+        valor: { timestamp, solicitante, versao: 'v4' },
+        updated_at: new Date().toISOString()
+      }]);
+
+      // 2. Dispara broadcast em tempo real para quem está com o app aberto agora
+      if (realtimeChannel) {
+        await realtimeChannel.send({
+          type: 'broadcast',
+          event: 'comando_forcar_update',
+          payload: { solicitante, timestamp }
+        });
+      }
+    } catch (e) {
+      console.warn('[Broadcast] Falha ao enviar broadcast:', e);
+    }
+  }
+
+  // 3. Atualiza o aparelho atual também
+  setTimeout(async () => {
+    localStorage.setItem('casa_last_remote_update', timestamp.toString());
+    await forcarAtualizacaoLocal(false);
+  }, 1000);
+}
+
 export async function baixarDadosIniciaisNuvem() {
   if (!state.supabase) return;
   try {
+    // 0. Verifica se houve um lançamento de atualização recente
+    const { data: cfgVersao } = await state.supabase.from('casa_configuracoes').select('*').eq('chave', 'versao_app').maybeSingle();
+    if (cfgVersao && cfgVersao.valor && cfgVersao.valor.timestamp) {
+      const lastUpdateLocal = parseInt(localStorage.getItem('casa_last_remote_update') || '0', 10);
+      if (cfgVersao.valor.timestamp > lastUpdateLocal) {
+        localStorage.setItem('casa_last_remote_update', cfgVersao.valor.timestamp.toString());
+        mostrarToast('Nova versão detectada na nuvem. Atualizando app...');
+        setTimeout(async () => {
+          await forcarAtualizacaoLocal(false);
+        }, 1200);
+        return;
+      }
+    }
+
     // 1. Baixa configurações (categorias e meta de reserva)
     const { data: configs } = await state.supabase.from('casa_configuracoes').select('*');
     if (configs && configs.length > 0) {

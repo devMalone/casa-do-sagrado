@@ -55,6 +55,36 @@ export function refreshIcons() {
   }
 }
 
+export async function forcarAtualizacaoLocal(mostrarAviso = true) {
+  if (mostrarAviso) {
+    mostrarToast('Limpando cache e forçando atualização...');
+  }
+
+  try {
+    if ('serviceWorker' in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      for (const registration of registrations) {
+        await registration.unregister();
+      }
+    }
+
+    if ('caches' in window) {
+      const cacheNames = await caches.keys();
+      for (const name of cacheNames) {
+        await caches.delete(name);
+      }
+    }
+  } catch (err) {
+    console.warn('[Cache Purge] Erro ao limpar:', err);
+  }
+
+  setTimeout(() => {
+    const url = new URL(window.location.href);
+    url.searchParams.set('reload', Date.now().toString());
+    window.location.replace(url.toString());
+  }, 400);
+}
+
 export function pedirConfirmacao({ titulo = 'Confirmação', mensagem = 'Deseja continuar?', textoConfirmar = 'Confirmar', perigo = true } = {}) {
   return new Promise((resolve) => {
     const modal = document.getElementById('modalConfirmacao');

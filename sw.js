@@ -1,4 +1,4 @@
-const CACHE_NAME = 'casa-sagrado-v4';
+const CACHE_NAME = 'casa-sagrado-v5';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',

@@ -1,8 +1,8 @@
 // js/app.js — Orquestrador Principal do Aplicativo (PWA)
 
 import { state, carregarDadosLocais, salvarLocal } from './state.js';
-import { abrirModal, fecharModalAtual, mostrarToast, refreshIcons, aplicarMascaraMoeda } from './utils.js';
-import { iniciarSupabaseSeConfigurado, salvarConfigSupabase, exportarBackupJSON, setAppRenderCallback } from './supabase.js';
+import { abrirModal, fecharModalAtual, mostrarToast, refreshIcons, aplicarMascaraMoeda, forcarAtualizacaoLocal } from './utils.js';
+import { iniciarSupabaseSeConfigurado, salvarConfigSupabase, exportarBackupJSON, setAppRenderCallback, lancarAtualizacaoGeral } from './supabase.js';
 import { renderizarCategoriasUI, adicionarCategoria, abrirModalCategorias, setOnCategoriaAlteradaCallback } from './categorias.js';
 import { renderizarEstoque, filtrarProdutos, abrirModalProduto, salvarProduto, setOnQuickSellCallback, toggleCalculadoraLote, recalcularCustoLote, aplicarCustoLote, excluirProdutoAtual, setOnProdutoAlteradoCallback } from './estoque.js';
 import { iniciarVendaRapida, ajustarQtdVenda, selecionarMetodoPgto, confirmarVendaFinal, renderizarHistoricoVendas, setOnVendaRealizadaCallback } from './vendas.js';
@@ -23,6 +23,24 @@ document.addEventListener('DOMContentLoaded', () => {
     navigator.serviceWorker.register('./sw.js').catch(() => {});
   }
 
+  // Captura do evento de Instalação do PWA
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    const btnInstall = document.getElementById('btnInstalarApp');
+    if (btnInstall) {
+      btnInstall.style.display = 'flex';
+      refreshIcons();
+    }
+  });
+
+  window.addEventListener('appinstalled', () => {
+    deferredInstallPrompt = null;
+    const btnInstall = document.getElementById('btnInstalarApp');
+    if (btnInstall) btnInstall.style.display = 'none';
+    mostrarToast('Casa do Sagrado instalada com sucesso!');
+  });
+
   // Android Back Button (PWA)
   window.addEventListener('popstate', () => {
     if (state.modalStack.length > 0) {
@@ -31,6 +49,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 });
+
+let deferredInstallPrompt = null;
 
 function configurarCallbacks() {
   setAppRenderCallback(renderizarTudo);
@@ -104,10 +124,27 @@ function vincularEventosGlobais() {
   document.getElementById('btnOperadorAtual')?.addEventListener('click', () => abrirModal('modalOnboarding'));
   document.getElementById('btnSalvarOperador')?.addEventListener('click', confirmarOperadorDigitado);
 
-  // Nuvem / Supabase
+  // Nuvem / Supabase & Atualizações
   document.getElementById('btnAbrirSync')?.addEventListener('click', () => abrirModal('modalSync'));
   document.getElementById('btnSalvarSupabase')?.addEventListener('click', salvarConfigSupabase);
   document.getElementById('btnExportarBackup')?.addEventListener('click', exportarBackupJSON);
+  document.getElementById('btnForcarUpdateLocal')?.addEventListener('click', () => forcarAtualizacaoLocal(true));
+  document.getElementById('btnLancarUpdateGeral')?.addEventListener('click', lancarAtualizacaoGeral);
+
+  // Instalação PWA Direta
+  document.getElementById('btnInstalarApp')?.addEventListener('click', async () => {
+    if (deferredInstallPrompt) {
+      deferredInstallPrompt.prompt();
+      const { outcome } = await deferredInstallPrompt.userChoice;
+      if (outcome === 'accepted') {
+        const btn = document.getElementById('btnInstalarApp');
+        if (btn) btn.style.display = 'none';
+      }
+      deferredInstallPrompt = null;
+    } else {
+      mostrarToast('Para instalar, use o menu do navegador (3 pontinhos > Instalar aplicativo).');
+    }
+  });
 
   // Categorias
   document.getElementById('btnGerenciarCategorias')?.addEventListener('click', abrirModalCategorias);

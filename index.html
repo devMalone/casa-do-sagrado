@@ -323,34 +323,11 @@
           <div class="form-group">
             <label class="form-label">Preço de Custo (Unit.)</label>
             <input type="text" id="prodPrecoCusto" class="form-input" inputmode="numeric" placeholder="R$ 0,00">
-            <button type="button" class="btn-link-helper" id="btnToggleCalculadoraLote">
-              <i data-lucide="calculator" style="width: 12px; height: 12px;"></i> Comprou por pacote/quilo?
-            </button>
           </div>
           <div class="form-group">
             <label class="form-label">Preço de Venda</label>
             <input type="text" id="prodPrecoVenda" class="form-input" inputmode="numeric" placeholder="R$ 0,00">
           </div>
-        </div>
-
-        <!-- Box Auxiliar de Cálculo por Lote/Pacote -->
-        <div class="lote-helper-box" id="boxCalculadoraLote" style="display: none;">
-          <div style="font-size: 11.5px; color: var(--text-muted);">
-            Calcule o custo individual se você comprou um pacote/quilo fechado:
-          </div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-            <div>
-              <label class="form-label" style="font-size: 11px;">Valor Total Pago</label>
-              <input type="text" id="loteValorTotal" class="form-input" placeholder="R$ 50,00" inputmode="numeric" style="font-size: 13px; height: 38px;">
-            </div>
-            <div>
-              <label class="form-label" style="font-size: 11px;">Qtd no Pacote</label>
-              <input type="number" id="loteQtdUnidades" class="form-input" placeholder="Ex: 100" min="1" style="font-size: 13px; height: 38px;">
-            </div>
-          </div>
-          <button type="button" class="btn-apply-lote" id="btnAplicarCustoLote">
-            <i data-lucide="check" style="width: 13px; height: 13px;"></i> Aplicar Custo Unitário: R$ <span id="loteResultadoUnit">0,00</span>
-          </button>
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">

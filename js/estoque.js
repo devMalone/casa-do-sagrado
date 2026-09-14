@@ -121,15 +121,6 @@ export function abrirModalProduto() {
   const btnDel = document.getElementById('btnExcluirProduto');
   if (btnDel) btnDel.style.display = 'none';
 
-  const boxLote = document.getElementById('boxCalculadoraLote');
-  if (boxLote) boxLote.style.display = 'none';
-  const inpLoteValor = document.getElementById('loteValorTotal');
-  const inpLoteQtd = document.getElementById('loteQtdUnidades');
-  const txtLoteRes = document.getElementById('loteResultadoUnit');
-  if (inpLoteValor) inpLoteValor.value = '';
-  if (inpLoteQtd) inpLoteQtd.value = '';
-  if (txtLoteRes) txtLoteRes.innerText = '0,00';
-
   abrirModal('modalProduto');
 }
 
@@ -154,56 +145,8 @@ export function editarProduto(id) {
 
   const btnDel = document.getElementById('btnExcluirProduto');
   if (btnDel) btnDel.style.display = 'flex';
-
-  const boxLote = document.getElementById('boxCalculadoraLote');
-  if (boxLote) boxLote.style.display = 'none';
   
   abrirModal('modalProduto');
-}
-
-export function toggleCalculadoraLote() {
-  const box = document.getElementById('boxCalculadoraLote');
-  if (!box) return;
-  const isHidden = box.style.display === 'none' || !box.style.display;
-  box.style.display = isHidden ? 'flex' : 'none';
-  if (isHidden) {
-    document.getElementById('loteValorTotal')?.focus();
-  }
-}
-
-export function recalcularCustoLote() {
-  const valorTotal = parseMonetaryValue(document.getElementById('loteValorTotal')?.value);
-  const qtd = parseInt(document.getElementById('loteQtdUnidades')?.value, 10) || 0;
-  const resElem = document.getElementById('loteResultadoUnit');
-
-  if (valorTotal > 0 && qtd > 0) {
-    const unit = Math.round((valorTotal / qtd) * 100) / 100;
-    if (resElem) resElem.innerText = formatarMoedaExibicao(unit);
-  } else {
-    if (resElem) resElem.innerText = '0,00';
-  }
-}
-
-export function aplicarCustoLote() {
-  const valorTotal = parseMonetaryValue(document.getElementById('loteValorTotal')?.value);
-  const qtd = parseInt(document.getElementById('loteQtdUnidades')?.value, 10) || 0;
-
-  if (valorTotal <= 0 || qtd <= 0) {
-    mostrarToast('Preencha o valor do pacote e a quantidade de unidades.');
-    return;
-  }
-
-  const unit = Math.round((valorTotal / qtd) * 100) / 100;
-  const inputCusto = document.getElementById('prodPrecoCusto');
-  const inputEstoque = document.getElementById('prodEstoque');
-
-  if (inputCusto) inputCusto.value = formatarMoedaExibicao(unit);
-  if (inputEstoque) inputEstoque.value = qtd;
-
-  const box = document.getElementById('boxCalculadoraLote');
-  if (box) box.style.display = 'none';
-
-  mostrarToast(`Custo de R$ ${formatarMoedaExibicao(unit)} / un e estoque de ${qtd} un aplicados!`);
 }
 
 export async function excluirProdutoAtual() {

@@ -4,7 +4,7 @@ import { state, carregarDadosLocais, salvarLocal } from './state.js';
 import { abrirModal, fecharModalAtual, mostrarToast, refreshIcons, aplicarMascaraMoeda, forcarAtualizacaoLocal } from './utils.js';
 import { iniciarSupabaseSeConfigurado, salvarConfigSupabase, exportarBackupJSON, setAppRenderCallback, lancarAtualizacaoGeral } from './supabase.js';
 import { renderizarCategoriasUI, adicionarCategoria, abrirModalCategorias, setOnCategoriaAlteradaCallback } from './categorias.js';
-import { renderizarEstoque, filtrarProdutos, abrirModalProduto, salvarProduto, setOnQuickSellCallback, toggleCalculadoraLote, recalcularCustoLote, aplicarCustoLote, excluirProdutoAtual, setOnProdutoAlteradoCallback } from './estoque.js';
+import { renderizarEstoque, filtrarProdutos, abrirModalProduto, salvarProduto, setOnQuickSellCallback, excluirProdutoAtual, setOnProdutoAlteradoCallback } from './estoque.js';
 import { iniciarVendaRapida, ajustarQtdVenda, selecionarMetodoPgto, confirmarVendaFinal, renderizarHistoricoVendas, setOnVendaRealizadaCallback } from './vendas.js';
 import { renderizarDashboard, abrirModalConfigReserva, salvarConfigReserva } from './dashboard.js';
 import { recalcularMarkup, copiarPrecoParaNovoProduto } from './markup.js';
@@ -166,17 +166,6 @@ function vincularEventosGlobais() {
   document.getElementById('prodPrecoVenda')?.addEventListener('input', function() {
     aplicarMascaraMoeda(this);
   });
-
-  // Calculadora de Custo por Pacote / Lote
-  document.getElementById('btnToggleCalculadoraLote')?.addEventListener('click', toggleCalculadoraLote);
-  const loteValor = document.getElementById('loteValorTotal');
-  const loteQtd = document.getElementById('loteQtdUnidades');
-  loteValor?.addEventListener('input', function() {
-    aplicarMascaraMoeda(this);
-    recalcularCustoLote();
-  });
-  loteQtd?.addEventListener('input', recalcularCustoLote);
-  document.getElementById('btnAplicarCustoLote')?.addEventListener('click', aplicarCustoLote);
 
   // Vendas
   document.getElementById('btnVendaQtdMenos')?.addEventListener('click', () => ajustarQtdVenda(-1));

@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Casa do Sagrado - Gestão Comercial</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0b0f17">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="icon" type="image/png" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23f59e0b'><circle cx='12' cy='12' r='10'/></svg>">
+  
+  <!-- Estilos Modulares -->
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/modals.css">
+
+  <!-- Bibliotecas Externas -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+  <!-- Top Bar Minimalista e Autoral -->
+  <header class="top-bar">
+    <div class="brand-area">
+      <div class="brand-wordmark">
+        <span class="brand-title">Casa do Sagrado</span>
+        <span class="brand-tag">Operação Comercial</span>
+      </div>
+    </div>
+    <div class="top-actions">
+      <div class="operator-pill" id="btnOperadorAtual" title="Alternar Operador">
+        <span class="operator-avatar" id="avatarInitial">O</span>
+        <span class="operator-name" id="labelOperador">Operador</span>
+        <i data-lucide="chevron-down" style="width: 13px; height: 13px; color: #64748b;"></i>
+      </div>
+      <button class="sync-action-btn" id="btnAbrirSync" title="Conexão Nuvem / Backup">
+        <span class="sync-indicator" id="syncStatusDot"></span>
+        <i data-lucide="cloud" style="width: 15px; height: 15px;"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- Viewport com as Abas -->
+  <main class="app-viewport">
+
+    <!-- ABA 1: ESTOQUE E CATÁLOGO -->
+    <section id="tab-estoque" class="tab-view active">
+      <div class="search-box">
+        <i data-lucide="search" style="width: 18px; height: 18px; color: var(--text-muted);"></i>
+        <input type="text" id="searchInput" class="search-input" placeholder="Buscar por nome ou categoria...">
+      </div>
+
+      <div class="categories-bar-wrapper">
+        <div class="pills-bar" id="categoryPills">
+          <!-- Injetado dinamicamente -->
+        </div>
+        <button type="button" class="btn-manage-cats" id="btnGerenciarCategorias" title="Gerenciar Categorias">
+          <i data-lucide="tags" style="width: 14px; height: 14px;"></i>
+          <span>Categorias</span>
+        </button>
+      </div>
+
+      <div class="products-grid" id="productsList">
+        <!-- Injetado dinamicamente -->
+      </div>
+    </section>
+
+    <!-- ABA 2: HISTÓRICO DE VENDAS -->
+    <section id="tab-vendas" class="tab-view">
+      <div class="kpi-card full-width" style="margin-bottom: 12px;">
+        <div class="kpi-label">Total de Vendas Registradas</div>
+        <div class="kpi-value green" id="vendasTotalContador">0 vendas</div>
+      </div>
+      <div class="sales-list" id="salesListContainer">
+        <!-- Injetado dinamicamente -->
+      </div>
+    </section>
+
+    <!-- ABA 3: DASHBOARD & FINANÇAS -->
+    <section id="tab-dashboard" class="tab-view">
+      
+      <!-- Fundo de Reserva Progress -->
+      <div class="reserve-box">
+        <div class="reserve-header">
+          <div class="reserve-title">
+            <i data-lucide="shield-check" style="width: 18px; height: 18px;"></i>
+            Fundo de Reserva <span id="tagPercentualReserva" style="font-size: 11px; opacity: 0.8;">(30%)</span>
+          </div>
+          <button class="reserve-target-btn" id="btnAbrirConfigReserva" title="Configurar Meta e Porcentagem">
+            <span>Meta: R$ <strong id="metaReservaVal">1.500,00</strong></span>
+            <i data-lucide="settings-2" style="width: 14px; height: 14px;"></i>
+          </button>
+        </div>
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" id="reserveProgressFill"></div>
+        </div>
+        <div class="reserve-footer">
+          <span>Acumulado: <strong id="reservaAcumuladaVal">R$ 0,00</strong></span>
+          <span id="reservePct">0%</span>
+        </div>
+        <div class="today-to-save" id="boxSepararHoje">
+          <i data-lucide="sparkles" style="width: 16px; height: 16px;"></i>
+          <span>Separar hoje para a Caixinha: <strong id="separarHojeVal">R$ 0,00</strong></span>
+        </div>
+      </div>
+
+      <!-- KPIs Gerais -->
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-label">Faturamento Total</div>
+          <div class="kpi-value gold" id="kpiFaturamento">R$ 0,00</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Custo Mercadorias</div>
+          <div class="kpi-value" id="kpiCusto">R$ 0,00</div>
+        </div>
+        <div class="kpi-card full-width">
+          <div class="kpi-label">Lucro Líquido Apurado</div>
+          <div class="kpi-value green" id="kpiLucro">R$ 0,00</div>
+        </div>
+      </div>
+
+      <!-- Vendas por Operador (Dinâmico) -->
+      <div class="kpi-card full-width">
+        <div class="kpi-label" style="margin-bottom: 8px;">Vendas por Operador</div>
+        <div id="vendasPorOperadorContainer" style="display: flex; flex-direction: column; gap: 8px; font-size: 13px;">
+          <!-- Injetado dinamicamente -->
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ABA 4: CALCULADORA DE MARKUP DIVISOR -->
+    <section id="tab-calc" class="tab-view">
+      <div class="calc-card">
+        <div class="brand-title" style="margin-bottom: 4px;">Ficha Técnica & Markup Divisor</div>
+        <p style="font-size: 12.5px; color: var(--text-muted);">Calcule o preço de venda para kits e produtos com precisão de centavos cobrindo taxas e garantindo a reserva.</p>
+        
+        <div class="form-group" style="margin-top: 10px;">
+          <label class="form-label">Custo Total dos Insumos (R$)</label>
+          <input type="text" id="calcCusto" class="form-input" inputmode="numeric" placeholder="R$ 0,00">
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <div class="form-group">
+            <label class="form-label">Taxa Cartão (%)</label>
+            <input type="number" id="calcTaxa" class="form-input" value="3.0" step="0.5">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Margem Desejada (%)</label>
+            <input type="number" id="calcMargem" class="form-input" value="60" step="1">
+          </div>
+        </div>
+
+        <div class="calc-alert" id="calcAlert"></div>
+
+        <div class="calc-result-box" id="calcResultBox">
+          <div style="font-size: 12px; color: var(--text-muted);">Preço de Venda Sugerido:</div>
+          <div style="font-size: 24px; font-weight: 800; color: var(--primary);" id="calcPrecoSugerido">R$ 0,00</div>
+          <div style="display: flex; justify-content: space-between; font-size: 12.5px; border-top: 1px solid var(--border); padding-top: 8px;">
+            <span>Lucro Líquido Unitário: <strong style="color: var(--success);" id="calcLucroUnitario">R$ 0,00</strong></span>
+            <span>Reserva (30%): <strong style="color: var(--primary);" id="calcReservaUnitaria">R$ 0,00</strong></span>
+          </div>
+        </div>
+
+        <button class="btn-main" id="btnCopiarMarkupParaProduto">
+          <i data-lucide="plus"></i> Cadastrar como Produto
+        </button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Botão Flutuante (FAB) para Cadastrar Produto -->
+  <button class="fab" id="fabAddProduct" title="Cadastrar Produto">
+    <i data-lucide="plus" style="width: 28px; height: 28px;"></i>
+  </button>
+
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav">
+    <button class="nav-btn active" data-tab="estoque">
+      <i data-lucide="package"></i>
+      <span>Estoque</span>
+    </button>
+    <button class="nav-btn" data-tab="vendas">
+      <i data-lucide="receipt"></i>
+      <span>Vendas</span>
+    </button>
+    <button class="nav-btn" data-tab="dashboard">
+      <i data-lucide="pie-chart"></i>
+      <span>Painel</span>
+    </button>
+    <button class="nav-btn" data-tab="calc">
+      <i data-lucide="calculator"></i>
+      <span>Markup</span>
+    </button>
+  </nav>
+
+  <!-- ================= MODAIS ================= -->
+
+  <!-- Modal 1: Onboarding Gatekeeper -->
+  <div class="modal-overlay center" id="modalOnboarding">
+    <div class="modal-container" style="max-width: 380px;">
+      <div class="modal-header" style="justify-content: center;">
+        <div class="brand-title">Identificação do Dispositivo</div>
+      </div>
+      <div class="modal-body" style="text-align: center;">
+        <div style="width: 44px; height: 44px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 50%; color: #f1f5f9; display: flex; align-items: center; justify-content: center; margin: 0 auto;">
+          <i data-lucide="user" style="width: 20px; height: 20px;"></i>
+        </div>
+        <p style="font-size: 13px; color: var(--text-muted); margin-top: 10px;">
+          Digite seu nome para identificar quem está operando as vendas neste aparelho:
+        </p>
+        
+        <div style="margin-top: 14px;">
+          <input type="text" id="inputOutroOperador" class="form-input" placeholder="Seu nome..." style="text-align: center; font-size: 15px;">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-main" id="btnSalvarOperador">Salvar Identificação</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 2: Venda Rápida (Bottom Sheet) -->
+  <div class="modal-overlay" id="modalVendaRapida">
+    <div class="modal-container">
+      <div class="modal-header">
+        <div class="modal-title" id="vendaProdNome">Registrar Venda</div>
+        <button class="modal-close-btn"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span style="font-size: 13px; color: var(--text-muted);">Preço Unitário:</span>
+          <span style="font-size: 18px; font-weight: 800; color: var(--primary);" id="vendaPrecoUnit">R$ 0,00</span>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Quantidade</label>
+          <div class="stepper-box">
+            <button class="stepper-btn" id="btnVendaQtdMenos">-</button>
+            <div class="stepper-val" id="vendaQtdVal">1</div>
+            <button class="stepper-btn" id="btnVendaQtdMais">+</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Forma de Pagamento</label>
+          <div class="payment-methods">
+            <div class="pay-btn active" data-method="Pix">⚡ Pix</div>
+            <div class="pay-btn" data-method="Dinheiro">💵 Dinheiro</div>
+            <div class="pay-btn" data-method="Cartão Débito">💳 Débito</div>
+            <div class="pay-btn" data-method="Cartão Crédito">💳 Crédito</div>
+          </div>
+        </div>
+
+        <div style="background: var(--surface-card); border-radius: 10px; padding: 12px; display: flex; justify-content: space-between; align-items: center; margin-top: 6px;">
+          <span style="font-size: 13px; font-weight: 600;">Total a Cobrar:</span>
+          <span style="font-size: 22px; font-weight: 800; color: var(--success);" id="vendaTotalFinal">R$ 0,00</span>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-main" id="btnConfirmarVenda">
+          <i data-lucide="check"></i> Confirmar Venda
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 3: Cadastro / Edição de Produto -->
+  <div class="modal-overlay" id="modalProduto">
+    <div class="modal-container">
+      <div class="modal-header">
+        <div class="modal-title" id="tituloModalProd">Cadastrar Produto</div>
+        <button class="modal-close-btn"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="prodEditId">
+        
+        <div class="form-group">
+          <label class="form-label">Nome do Produto</label>
+          <input type="text" id="prodNome" class="form-input" placeholder="Ex: Terço Madeira São Bento">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Categoria</label>
+          <select id="prodCategoria" class="form-select">
+            <!-- Injetado dinamicamente -->
+          </select>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <div class="form-group">
+            <label class="form-label">Preço de Custo</label>
+            <input type="text" id="prodPrecoCusto" class="form-input" inputmode="numeric" placeholder="R$ 0,00">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Preço de Venda</label>
+            <input type="text" id="prodPrecoVenda" class="form-input" inputmode="numeric" placeholder="R$ 0,00">
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <div class="form-group">
+            <label class="form-label">Estoque Inicial</label>
+            <input type="number" id="prodEstoque" class="form-input" value="10" min="0">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Estoque Mínimo</label>
+            <input type="number" id="prodEstoqueMin" class="form-input" value="2" min="1">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-main" id="btnSalvarProduto">
+          <i data-lucide="save"></i> Salvar Produto
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 4: Gerenciar Categorias (Dedicado) -->
+  <div class="modal-overlay center" id="modalCategorias">
+    <div class="modal-container" style="max-width: 420px;">
+      <div class="modal-header">
+        <div class="modal-title">Gerenciar Categorias</div>
+        <button class="modal-close-btn"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 13px; color: var(--text-muted);">Adicione ou remova categorias do catálogo e formulários.</p>
+        
+        <div class="add-cat-row">
+          <input type="text" id="inputNovaCategoria" class="form-input" placeholder="Nome da categoria..." style="height: 44px; font-size: 14px;">
+          <button type="button" class="btn-main" id="btnAdicionarCategoria" style="width: auto; padding: 0 16px; height: 44px; font-size: 13px; white-space: nowrap;">
+            <i data-lucide="plus"></i> Adicionar
+          </button>
+        </div>
+
+        <div style="margin-top: 6px;">
+          <label class="form-label" style="margin-bottom: 6px;">Categorias Ativas:</label>
+          <div class="cat-chips-list" id="listaCategoriasChips">
+            <!-- Injetado dinamicamente -->
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="pay-btn modal-close-btn" style="width: 100%;">Concluído</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 5: Configurações da Reserva (Dedicado) -->
+  <div class="modal-overlay center" id="modalConfigReserva">
+    <div class="modal-container" style="max-width: 380px;">
+      <div class="modal-header">
+        <div class="modal-title">Configurar Fundo de Reserva</div>
+        <button class="modal-close-btn"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 13px; color: var(--text-muted);">Ajuste a meta do fundo e o percentual de retenção sobre o lucro das vendas.</p>
+        
+        <div class="form-group">
+          <label class="form-label">Meta / Teto do Fundo (R$)</label>
+          <input type="number" id="inputMetaReserva" class="form-input" placeholder="1500" step="100">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Porcentagem Retida do Lucro (%)</label>
+          <input type="number" id="inputPctReserva" class="form-input" placeholder="30" min="1" max="100" step="5">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-main" id="btnSalvarConfigReserva">
+          <i data-lucide="save"></i> Salvar Parâmetros
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 6: Conexão Nuvem / Supabase & Backup -->
+  <div class="modal-overlay center" id="modalSync">
+    <div class="modal-container">
+      <div class="modal-header">
+        <div class="modal-title">Sincronização em Nuvem</div>
+        <button class="modal-close-btn"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 13px; color: var(--text-muted);">Sincroniza os dados em tempo real entre múltiplos dispositivos e operadores.</p>
+        
+        <div class="form-group">
+          <label class="form-label">Project URL</label>
+          <input type="text" id="cfgSupabaseUrl" class="form-input" placeholder="https://xyz.supabase.co" value="https://gzkfzgbysodflayeejgy.supabase.co">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Anon Public Key</label>
+          <input type="password" id="cfgSupabaseKey" class="form-input" placeholder="sb_publishable_..." value="sb_publishable_Pineihb_QYU9SoOKWfa37g_11PXYZR9">
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; margin-top: 4px;">
+          <span style="color: var(--text-muted);">Status da Nuvem: <strong id="statusConexaoTxt" style="color: var(--text-muted);">Desconectado</strong></span>
+          <button class="btn-main" id="btnSalvarSupabase" style="width: auto; padding: 0 14px; height: 34px; font-size: 12px;">
+            <i data-lucide="plug"></i> Conectar
+          </button>
+        </div>
+      </div>
+      <div class="modal-footer" style="flex-direction: column;">
+        <button class="pay-btn" id="btnExportarBackup" style="width: 100%;">
+          <i data-lucide="download"></i> Baixar Backup Completo (JSON)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div class="toast" id="appToast">
+    <i data-lucide="info" style="width: 16px; height: 16px;"></i>
+    <span id="toastMsg">Mensagem</span>
+  </div>
+
+  <!-- Script Modular (ES Modules) -->
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+{
+  "name": "Casa do Sagrado - Gestão Comercial",
+  "short_name": "Casa do Sagrado",
+  "description": "Sistema de gestão de estoque, vendas e fundo de reserva da Casa do Sagrado.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0b0f17",
+  "theme_color": "#0b0f17",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

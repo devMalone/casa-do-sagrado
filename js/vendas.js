@@ -140,7 +140,14 @@ export function renderizarHistoricoVendas() {
 
     const prodAtual = state.produtos.find(p => p.id === v.produto_id);
     const nomeExibicao = prodAtual ? prodAtual.nome : (v.nome_produto || 'Produto');
-    const metodoPgto = v.metodo_pagamento || 'Outro';
+    
+    // Normaliza método de pagamento para badge conciso sem quebra (ex: "Cartão Crédito" -> "Crédito")
+    let metodoPgto = v.metodo_pagamento || 'Outro';
+    if (metodoPgto.toLowerCase().includes('crédito') || metodoPgto.toLowerCase().includes('credito')) {
+      metodoPgto = 'Crédito';
+    } else if (metodoPgto.toLowerCase().includes('débito') || metodoPgto.toLowerCase().includes('debito')) {
+      metodoPgto = 'Débito';
+    }
 
     const item = document.createElement('div');
     item.className = 'sale-item';
@@ -158,8 +165,7 @@ export function renderizarHistoricoVendas() {
       </div>
       <div class="sale-bottom-row">
         <div class="sale-meta">
-          <span>${dataFormatada}</span>
-          <span>•</span>
+          <span class="sale-time">${dataFormatada}</span>
           <span class="sale-operator"><i data-lucide="user" style="width: 11px; height: 11px;"></i> ${v.operador || 'Operador'}</span>
         </div>
         <div class="sale-bottom-right">

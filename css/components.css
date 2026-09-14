@@ -563,7 +563,7 @@
 .sale-top-row {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
 }
 
@@ -571,12 +571,15 @@
   font-size: 13.5px;
   font-weight: 700;
   color: #f3f4f6;
-  line-height: 1.3;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  word-break: break-word;
   flex: 1;
   min-width: 0;
+  padding-right: 4px;
 }
 
 .sale-top-right {
@@ -584,12 +587,14 @@
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .sale-val {
   font-size: 14.5px;
   font-weight: 800;
   color: var(--success);
+  white-space: nowrap;
 }
 
 .btn-undo-sale {
@@ -685,9 +690,10 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 8px;
-  padding-top: 6px;
-  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  gap: 8px 12px;
+  flex-wrap: wrap;
+  padding-top: 7px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .sale-meta {
@@ -695,16 +701,20 @@
   color: var(--text-muted);
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+}
+
+.sale-time {
+  white-space: nowrap;
 }
 
 .sale-operator {
   display: inline-flex;
   align-items: center;
   gap: 3px;
+  white-space: nowrap;
+  color: #cbd5e1;
 }
 
 .sale-bottom-right {
@@ -712,6 +722,7 @@
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .sale-pay-badge {
@@ -719,11 +730,13 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.03em;
-  padding: 1.5px 6px;
+  padding: 2px 7px;
   border-radius: 5px;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.1);
   color: #cbd5e1;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .sale-reserve {
@@ -731,6 +744,7 @@
   font-weight: 600;
   color: var(--primary);
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 /* Calculator Card */

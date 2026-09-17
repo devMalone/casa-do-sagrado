@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Casa do Sagrado — Guia de Gestão, Finanças e Precificação</title>
+  <style>
+    /* ==========================================================================
+       ESTILOS GERAIS E TIPOGRAFIA EXECUTIVA (LIGHT PRINT-READY)
+       ========================================================================== */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: #1e293b;
+      background-color: #f8fafc;
+      line-height: 1.55;
+      font-size: 13.5px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .document-container {
+      max-width: 860px;
+      margin: 24px auto;
+      background: #ffffff;
+      padding: 40px 48px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      border-radius: 8px;
+    }
+
+    /* Barra Superior Não Imprimível */
+    .no-print-bar {
+      max-width: 860px;
+      margin: 20px auto 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #0f172a;
+      color: #f8fafc;
+      padding: 12px 24px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+    }
+
+    .btn-print {
+      background: #f59e0b;
+      color: #0f172a;
+      border: none;
+      padding: 9px 18px;
+      font-size: 13px;
+      font-weight: 700;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+
+    .btn-print:hover {
+      background: #d97706;
+      transform: translateY(-1px);
+    }
+
+    /* Cabeçalho do Dossiê */
+    .doc-header {
+      border-bottom: 2px solid #0f172a;
+      padding-bottom: 16px;
+      margin-bottom: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+
+    .brand-title {
+      font-size: 24px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #0f172a;
+      line-height: 1.1;
+    }
+
+    .brand-subtitle {
+      font-size: 13px;
+      font-weight: 600;
+      color: #b45309;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-top: 4px;
+    }
+
+    .doc-meta {
+      text-align: right;
+      font-size: 11.5px;
+      color: #64748b;
+      line-height: 1.4;
+    }
+
+    /* Seções e Títulos */
+    .section-title {
+      font-size: 16px;
+      font-weight: 800;
+      color: #0f172a;
+      border-bottom: 1.5px solid #e2e8f0;
+      padding-bottom: 6px;
+      margin-top: 28px;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .section-badge {
+      background: #0f172a;
+      color: #f8fafc;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: 700;
+    }
+
+    p {
+      margin-bottom: 10px;
+      color: #334155;
+    }
+
+    /* Blocos de Destaque / Cards */
+    .info-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-left: 4px solid #0f172a;
+      border-radius: 6px;
+      padding: 14px 16px;
+      margin: 12px 0;
+      break-inside: avoid;
+    }
+
+    .info-card.gold {
+      border-left-color: #f59e0b;
+      background: #fffbeb;
+    }
+
+    .info-card.green {
+      border-left-color: #10b981;
+      background: #f0fdf4;
+    }
+
+    .info-card-title {
+      font-weight: 700;
+      font-size: 13px;
+      color: #0f172a;
+      margin-bottom: 4px;
+    }
+
+    /* Tabelas Contábeis */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0;
+      font-size: 12.5px;
+      break-inside: avoid;
+    }
+
+    th, td {
+      padding: 8px 10px;
+      border: 1px solid #cbd5e1;
+      text-align: left;
+    }
+
+    th {
+      background-color: #0f172a;
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 11.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    tr:nth-child(even) {
+      background-color: #f8fafc;
+    }
+
+    .total-row {
+      background-color: #f1f5f9 !important;
+      font-weight: 800;
+      color: #0f172a;
+      border-top: 2px solid #0f172a;
+    }
+
+    /* Demonstração de Fórmulas Matemáticas */
+    .formula-box {
+      background: #f1f5f9;
+      border: 1.5px dashed #94a3b8;
+      border-radius: 8px;
+      padding: 16px;
+      margin: 14px 0;
+      text-align: center;
+      break-inside: avoid;
+    }
+
+    .formula-visual {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 16px;
+      font-weight: 800;
+      color: #0f172a;
+      margin: 8px 0;
+    }
+
+    .fraction {
+      display: inline-flex;
+      flex-direction: column;
+      vertical-align: middle;
+      text-align: center;
+    }
+
+    .fraction-numerator {
+      border-bottom: 2px solid #0f172a;
+      padding-bottom: 2px;
+      padding-left: 8px;
+      padding-right: 8px;
+    }
+
+    .fraction-denominator {
+      padding-top: 2px;
+      padding-left: 8px;
+      padding-right: 8px;
+    }
+
+    /* Grid de Duas Colunas */
+    .two-cols {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin: 12px 0;
+      break-inside: avoid;
+    }
+
+    .col-box {
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 12px 14px;
+      background: #ffffff;
+    }
+
+    .col-box-title {
+      font-weight: 700;
+      font-size: 13px;
+      color: #0f172a;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Lista de Passos */
+    .step-list {
+      list-style: none;
+      margin: 10px 0;
+    }
+
+    .step-item {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+      break-inside: avoid;
+    }
+
+    .step-num {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #0f172a;
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .step-content {
+      flex: 1;
+      font-size: 13px;
+      color: #334155;
+    }
+
+    /* Rodapé do Documento */
+    .doc-footer {
+      border-top: 1px solid #cbd5e1;
+      margin-top: 36px;
+      padding-top: 14px;
+      font-size: 11px;
+      color: #64748b;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* ==========================================================================
+       CONFIGURAÇÃO ESPECÍFICA DE IMPRESSÃO (PAGINAÇÃO & QUEBRAS)
+       ========================================================================== */
+    @page {
+      size: A4;
+      margin: 14mm 14mm 16mm 14mm;
+    }
+
+    @media print {
+      body {
+        background-color: #ffffff;
+        font-size: 12.5px;
+      }
+
+      .no-print-bar {
+        display: none !important;
+      }
+
+      .document-container {
+        max-width: 100%;
+        margin: 0;
+        padding: 0;
+        box-shadow: none;
+        border-radius: 0;
+      }
+
+      /* Forçar cores de fundo em navegadores WebKit/Chromium */
+      * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+
+      /* Controle Rigoroso de Quebras de Página */
+      .page-break {
+        page-break-before: always;
+        break-before: page;
+      }
+
+      .avoid-break {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+      }
+
+      h2, h3, .section-title {
+        page-break-after: avoid;
+        break-after: avoid;
+      }
+
+      table, tr, td, th {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Barra com Botão de Impressão (Oculta na impressão final) -->
+  <div class="no-print-bar">
+    <div>
+      <strong>Casa do Sagrado</strong> — Dossiê Pronto para Impressão e PDF
+    </div>
+    <button class="btn-print" onclick="window.print()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+      Imprimir / Salvar em PDF (Ctrl + P)
+    </button>
+  </div>
+
+  <!-- Documento Principal Formatado em A4 -->
+  <div class="document-container">
+
+    <!-- Cabeçalho Institucional -->
+    <header class="doc-header">
+      <div>
+        <div class="brand-title">Casa do Sagrado</div>
+        <div class="brand-subtitle">Manual de Finanças, Precificação & Contabilidade</div>
+      </div>
+      <div class="doc-meta">
+        <strong>Reunião Estratégica de Formalização</strong><br>
+        Versão do Sistema: v20 (Catálogo & ERP)<br>
+        Regime: MEI (Simples Nacional)
+      </div>
+    </header>
+
+    <!-- INTRODUÇÃO -->
+    <p>
+      Este guia foi estruturado para embasar a reunião de planejamento da <strong>Casa do Sagrado</strong>. O objetivo é demonstrar com clareza como funciona a gestão bancária conjunta, a classificação contábil dos investimentos já realizados e a fórmula exata de precificação configurada no aplicativo da loja.
+    </p>
+
+    <!-- SEÇÃO 1: GESTÃO BANCÁRIA -->
+    <div class="avoid-break">
+      <div class="section-title">
+        <span class="section-badge">1</span>
+        Gestão Bancária: Mercado Pago PJ & Acesso Compartilhado
+      </div>
+
+      <div class="two-cols">
+        <div class="col-box">
+          <div class="col-box-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0f172a" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+            Conta PF e PJ no Mesmo Celular
+          </div>
+          <p style="font-size: 12px; margin: 0;">
+            O Mercado Pago permite transitar entre sua conta pessoal e a conta da <strong>Casa do Sagrado PJ</strong> com apenas 1 toque no topo da tela (alternância de perfis). Não é necessário ter dois aparelhos celulares. O saldo da conta PJ rende 100% do CDI com liquidez diária.
+          </p>
+        </div>
+
+        <div class="col-box">
+          <div class="col-box-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0f172a" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+            Acesso em Dois Celulares Diferentes
+          </div>
+          <p style="font-size: 12px; margin: 0;">
+            A conta PJ possui a ferramenta <strong>Gestão de Colaboradores</strong>. O titular envia um convite para o e-mail da sócia. Ela acessa pelo próprio aparelho com login seguro para emitir Pix, conferir recebimentos e ver o saldo da loja em tempo real.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- SEÇÃO 2: VISÃO CONTÁBIL DA PRIMEIRA COMPRA -->
+    <div class="avoid-break">
+      <div class="section-title">
+        <span class="section-badge">2</span>
+        Visão Contábil: O que são os R$ 263,86 Investidos?
+      </div>
+
+      <p>
+        Na contabilidade empresarial, gastar dinheiro em mercadorias e ferramentas <strong>não é prejuízo</strong>. Trata-se de uma <strong>Permuta de Ativos</strong>: o dinheiro saiu da conta, mas entrou integralmente no patrimônio da empresa na forma de bens econômicos produtivos:
+      </p>
+
+      <div class="formula-box" style="padding: 10px; margin: 8px 0;">
+        <span style="font-size: 14px; font-weight: 800; color: #0f172a;">
+          ATIVO (Bens & Direitos) = PASSIVO (Dívidas) + PATRIMÔNIO LÍQUIDO (Capital dos Sócios)
+        </span>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Item Adquirido</th>
+            <th>Custo (R$)</th>
+            <th>Classificação Contábil</th>
+            <th>Função Operacional na Loja</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Balança Digital de Precisão</strong></td>
+            <td>R$ 25,00</td>
+            <td><strong>Ativo Imobilizado</strong></td>
+            <td>Ferramenta durável de trabalho. Pesa milhares de saquinhos sem se desgastar.</td>
+          </tr>
+          <tr>
+            <td><strong>50 Caixas Kraft (20x16x5 cm)</strong></td>
+            <td>R$ 68,97</td>
+            <td><strong>Estoque (Embalagens)</strong></td>
+            <td>Ativo Circulante que se transforma em receita ao vender kits de presentes.</td>
+          </tr>
+          <tr>
+            <td><strong>Plástico Bolha (40cm x 100m)</strong></td>
+            <td>R$ 45,90</td>
+            <td><strong>Estoque (Insumos)</strong></td>
+            <td>Rende proteção para cerca de 300 pacotes e encomendas da loja.</td>
+          </tr>
+          <tr>
+            <td><strong>Papel Kraft Rolo (30cm x 50m)</strong></td>
+            <td>R$ 15,64</td>
+            <td><strong>Estoque (Insumos)</strong></td>
+            <td>Forração rústica e ninho de proteção para 150 a 180 caixas.</td>
+          </tr>
+          <tr>
+            <td><strong>Saquinhos Kraft Zip Lock</strong></td>
+            <td>R$ 24,00</td>
+            <td><strong>Estoque (Embalagens)</strong></td>
+            <td>Embalagem nobre para porcionamento de 40g de ervas de banho/defumação.</td>
+          </tr>
+          <tr>
+            <td><strong>4 Águas Rituais (Rosas, Laranjeira...)</strong></td>
+            <td>R$ 46,76</td>
+            <td><strong>Estoque para Revenda</strong></td>
+            <td>Mercadoria pronta para venda na vitrine por R$ 22,00 a R$ 26,00 cada.</td>
+          </tr>
+          <tr>
+            <td><strong>1 Água de Alfazema</strong></td>
+            <td>R$ 11,69</td>
+            <td><strong>Material de Consumo</strong></td>
+            <td>Frasco destinado ao marketing olfativo (cheirinho oficial das caixas).</td>
+          </tr>
+          <tr>
+            <td><strong>Rateio de Frete / Volume Correios</strong></td>
+            <td>R$ 25,90</td>
+            <td><strong>Custo Adicionado ao Estoque</strong></td>
+            <td>Conforme a regra contábil (CPC 16), o frete integra o valor do estoque.</td>
+          </tr>
+          <tr class="total-row">
+            <td>TOTAL DO ATIVO CONSTITUÍDO</td>
+            <td>R$ 263,86</td>
+            <td colspan="2">100% convertido em Patrimônio e Infraestrutura da Loja</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- QUEBRA DE PÁGINA PARA A SEÇÃO DE PRECIFICAÇÃO E MARKUP -->
+    <div class="page-break"></div>
+
+    <!-- SEÇÃO 3: FATURAMENTO VS LUCRO -->
+    <div class="avoid-break">
+      <div class="section-title">
+        <span class="section-badge">3</span>
+        Faturamento vs. Lucro Líquido: A Régua Financeira
+      </div>
+
+      <p>
+        O erro mais comum no comércio é considerar o dinheiro da venda como lucro. Na <strong>Casa do Sagrado</strong>, o dinheiro passa por um funil transparente:
+      </p>
+
+      <div class="info-card gold">
+        <div style="font-family: monospace; font-size: 13px; line-height: 1.6;">
+          <strong>(+) FATURAMENTO BRUTO:</strong> Total recebido dos clientes no balcão/Pix<br>
+          <strong>(-) Custo das Mercadorias (CMV):</strong> O que foi gasto nas ervas, velas e caixas<br>
+          <strong>(-) Taxas da Maquininha/Pix:</strong> Ex: 3% das transações de cartão<br>
+          <span style="color: #047857; font-weight: 700;">(=) LUCRO BRUTO OPERACIONAL</span><br>
+          <strong>(-) Custos Fixos Proporcionais:</strong> Guia única do MEI (~R$ 75,00/mês)<br>
+          <span style="color: #1e3a8a; font-weight: 700;">(=) LUCRO LÍQUIDO REAL</span><br>
+          &nbsp;&nbsp;&nbsp;&nbsp;├── <strong>(30%) Fundo de Reserva:</strong> Retido na caixinha para reinvestir e blindar a loja<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;└── <strong>(70%) Lucro Disponível:</strong> Divisão justa entre os sócios ou caixa livre
+        </div>
+      </div>
+    </div>
+
+    <!-- SEÇÃO 4: O MARKUP DIVISOR DO APLICATIVO -->
+    <div class="avoid-break">
+      <div class="section-title">
+        <span class="section-badge">4</span>
+        A Matemática do Markup Divisor (O Motor do App)
+      </div>
+
+      <div class="info-card" style="border-left-color: #ef4444; background: #fff5f5;">
+        <div class="info-card-title" style="color: #991b1b;">O Perigo da Conta Comum de Padaria ("Custo + 60%")</div>
+        <p style="font-size: 12px; margin: 0; color: #7f1d1d;">
+          Se um produto custa R$ 10,00 e você faz a conta errada: <em>10 + 60% = R$ 16,00</em>. Ao vender por R$ 16,00 e pagar a taxa da maquininha (R$ 0,48), o seu lucro é de apenas R$ 5,52. Dividindo 5,52 por 16,00, <strong>a sua margem real foi de apenas 34,5%, e não 60%!</strong>
+        </p>
+      </div>
+
+      <p>
+        Para garantir a margem real no bolso, o módulo de <strong>Ferramentas / Ficha Técnica</strong> do nosso aplicativo utiliza a fórmula oficial da engenharia de preços:
+      </p>
+
+      <div class="formula-box">
+        <div style="font-size: 11px; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 4px;">Fórmula do Markup Divisor</div>
+        <div class="formula-visual">
+          <span>Preço de Venda =</span>
+          <div class="fraction">
+            <span class="fraction-numerator">Custo Total dos Insumos</span>
+            <span class="fraction-denominator">1 - (Taxa Cartão + Margem Desejada)</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="info-card green">
+        <div class="info-card-title" style="color: #065f46;">Demonstração com Números Reais (Kit de Banhos com Custo R$ 8,00):</div>
+        <p style="font-size: 12.5px; margin: 0; color: #047857;">
+          • Custo dos Insumos (Ervas + Caixa + Sal): <strong>R$ 8,00</strong><br>
+          • Taxa estimada de Maquininha/Pix: <strong>3% (0,03)</strong> | Margem Líquida Desejada: <strong>60% (0,60)</strong><br>
+          • Cálculo: <strong>R$ 8,00 ÷ (1 - 0,63) = R$ 8,00 ÷ 0,37 = R$ 21,62</strong>.<br>
+          • <strong>Conclusão:</strong> Vendendo a <strong>R$ 22,00</strong>, a loja paga os R$ 8,00 do produto, paga o cartão e coloca <strong>exatamente 60% limpos</strong> no bolso!
+        </p>
+      </div>
+    </div>
+
+    <!-- SEÇÃO 5: PRECIFICAÇÃO DE KITS E RATEIO DE FRETE -->
+    <div class="avoid-break">
+      <div class="section-title">
+        <span class="section-badge">5</span>
+        Como Precificar Kits com Vários Itens e Frete
+      </div>
+
+      <p>
+        Quando um pedido no atacado tiver frete pago, o valor do frete deve ser rateado proporcionalmente. Se compramos R$ 200,00 em mercadorias e pagamos R$ 20,00 de frete, o frete representa <strong>10%</strong>. Cada item de R$ 10,00 passa a ter o custo real de <strong>R$ 11,00</strong>.
+      </p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Componente do Kit Presente</th>
+            <th>Custo Unitário</th>
+            <th>Origem do Custo</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>2 Saquinhos de Ervas Especiais (40g cada)</td>
+            <td>R$ 2,80</td>
+            <td>Fracionado do quilo comprado no atacado</td>
+          </tr>
+          <tr>
+            <td>1 Saquinho de Sal Grosso com Alecrim (100g)</td>
+            <td>R$ 0,70</td>
+            <td>Sal grosso + erva aromatizada</td>
+          </tr>
+          <tr>
+            <td>1 Caixa Kraft Montável (20x16x5 cm)</td>
+            <td>R$ 1,38</td>
+            <td>Lote de 50 caixas da Shopee</td>
+          </tr>
+          <tr>
+            <td>Ninho de Papel Kraft + Plástico Bolha interno</td>
+            <td>R$ 0,25</td>
+            <td>Rolos de 50m e 100m da Shopee</td>
+          </tr>
+          <tr>
+            <td>Etiquetas Adesivas + Borrifada de Alfazema</td>
+            <td>R$ 0,15</td>
+            <td>Identificação visual e marketing olfativo</td>
+          </tr>
+          <tr class="total-row">
+            <td>CUSTO TOTAL DO CONJUNTO (INSUMOS)</td>
+            <td>R$ 5,28</td>
+            <td>Preço sugerido no app: R$ 19,90 a R$ 29,90</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- QUEBRA DE PÁGINA PARA PONTO DE EQUILÍBRIO E ROTEIRO -->
+    <div class="page-break"></div>
+
+    <!-- SEÇÃO 6: PONTO DE EQUILÍBRIO E FUNDO DE RESERVA -->
+    <div class="avoid-break">
+      <div class="section-title">
+        <span class="section-badge">6</span>
+        Ponto de Equilíbrio & Fundo de Reserva
+      </div>
+
+      <div class="two-cols">
+        <div class="col-box">
+          <div class="col-box-title" style="color: #b45309;">
+            Ponto de Equilíbrio (Break-Even)
+          </div>
+          <p style="font-size: 12px; margin-bottom: 6px;">
+            É o momento exato em que o lucro das vendas empata com o custo fixo mensal.
+          </p>
+          <div style="background: #f8fafc; padding: 8px; border-radius: 4px; font-size: 11.5px; border: 1px solid #e2e8f0;">
+            • Custo Fixo Único da Loja (MEI): <strong>~R$ 75,00/mês</strong><br>
+            • Dias de Funcionamento no Mês: <strong>25 dias</strong><br>
+            • <strong>Meta Diária de Cobertura:</strong> <strong>R$ 3,00 por dia</strong>.<br>
+            <em>Vendendo apenas 1 saquinho de ervas no dia, a loja já cobriu todos os seus custos fixos diários!</em>
+          </div>
+        </div>
+
+        <div class="col-box">
+          <div class="col-box-title" style="color: #047857;">
+            Fundo de Reserva (Caixinha dos 30%)
+          </div>
+          <p style="font-size: 12px; margin-bottom: 6px;">
+            O app retém automaticamente 30% do lucro de cada venda confirmada.
+          </p>
+          <div style="background: #f8fafc; padding: 8px; border-radius: 4px; font-size: 11.5px; border: 1px solid #e2e8f0;">
+            • Teto da Meta Inicial: <strong>R$ 1.500,00</strong><br>
+            • O dinheiro fica seguro rendendo 100% CDI no Mercado Pago PJ;<br>
+            • Serve para recomprar estoque de velas e ervas à vista com desconto, sem tirar dinheiro do próprio bolso.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SEÇÃO 7: ROTEIRO E CHECKLIST DA REUNIÃO -->
+    <div class="avoid-break">
+      <div class="section-title">
+        <span class="section-badge">7</span>
+        Roteiro Prático da Reunião de Amanhã
+      </div>
+
+      <ul class="step-list">
+        <li class="step-item">
+          <div class="step-num">1</div>
+          <div class="step-content">
+            <strong>Formalização & Bancos:</strong> Abertura do MEI no CNPJ e solicitação da conta Mercado Pago PJ com cadastro da sócia como colaboradora autorizada.
+          </div>
+        </li>
+        <li class="step-item">
+          <div class="step-num">2</div>
+          <div class="step-content">
+            <strong>Identidade Visual & Logotipo:</strong> Escolha das cores (Ouro Sagrado, Azul Profundo/Preto e Kraft) e aprovação da arte para os adesivos redondos das caixas e saquinhos de 40g.
+          </div>
+        </li>
+        <li class="step-item">
+          <div class="step-num">3</div>
+          <div class="step-content">
+            <strong>Canais Digitais:</strong> Criação do perfil oficial no Instagram e configuração do WhatsApp Business da loja com catálogo e mensagens automáticas.
+          </div>
+        </li>
+        <li class="step-item">
+          <div class="step-num">4</div>
+          <div class="step-content">
+            <strong>Treinamento no Aplicativo Casa do Sagrado (v20):</strong> Apresentar a nova aba <em>Catálogo (Vitrine em blocos)</em>, ensinar o cadastro com foto direta da câmera do celular e demonstrar a realização de uma venda rápida com o Fundo de Reserva subindo na tela.
+          </div>
+        </li>
+        <li class="step-item">
+          <div class="step-num">5</div>
+          <div class="step-content">
+            <strong>Planejamento do Primeiro Lote de Banhos:</strong> Definir as primeiras 5 ervas a comprar em fardo para fracionamento com a balança nos saquinhos de 40g.
+          </div>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Rodapé -->
+    <footer class="doc-footer avoid-break">
+      <div>
+        <strong>Casa do Sagrado</strong> — Gestão Comercial & Inteligência de Negócios
+      </div>
+      <div>
+        Documento Emitido para Alinhamento Societário • Potirendaba / Rio Preto - SP
+      </div>
+    </footer>
+
+  </div>
+
+</body>
+</html>

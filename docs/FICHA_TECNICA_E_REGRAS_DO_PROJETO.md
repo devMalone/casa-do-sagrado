@@ -1,14 +1,14 @@
 # Ficha Técnica, Histórico de Evolução e Regras de Aprendizado da IA
 **Projeto:** Casa do Sagrado — Sistema de Gestão Comercial e Inteligência de Vendas  
 **Ambiente:** Progressive Web App (PWA Mobile-First / Desktop), Local-First com Sincronização Supabase  
-**Data de Consolidação:** 14 de Setembro de 2026  
-**Versão Atual Estável:** `v18`  
+**Data de Consolidação:** 17 de Setembro de 2026  
+**Versão Atual Estável:** `v20`  
 
 ---
 
 ## 1. Visão Geral e Arquitetura do Sistema
 
-O **Casa do Sagrado** é um sistema comercial de ponto de venda (PDV), gestão de estoques, consultoria de markup e governança de reservas financeiras.
+O **Casa do Sagrado** é um sistema comercial de ponto de venda (PDV), vitrine visual, gestão de estoques, consultoria de markup e governança de reservas financeiras.
 
 ```mermaid
 graph TD
@@ -66,6 +66,22 @@ Substituição da ferramenta isolada por uma central modular com abas internas:
 ### 2.5 Atualização e Sincronização em Massa
 - Botão no app para forçar a atualização remota de todos os terminais conectados via Supabase Broadcast, garantindo que correções e novidades cheguem a todos os sócios sem exigir instalação manual.
 - Exportação completa de backup em formato JSON.
+
+### 2.6 Ponto de Equilíbrio & Gestão de Custos Fixos (v19)
+- Modal dedicado para cadastro item a item das despesas fixas da loja (Aluguel, MEI, Luz, Internet).
+- Definição customizada de dias úteis/funcionamento no mês para cálculo exato da meta de cobertura diária.
+- Card visual no Dashboard com barra de progresso do Ponto de Equilíbrio do dia (relacionando o lucro bruto apurado no dia com a meta diária de custo fixo).
+
+### 2.7 Catálogo Visual, Fotos de Produtos e Vitrine em Grade 1:1 (v20)
+- Novo módulo `js/catalogo.js` e aba **Catálogo** como vitrine primária na barra inferior (5 abas calibradas).
+- Grade responsiva em blocos com proporção quadrada `1:1` (conforme o esboço desenhado), exibindo foto, badge de estoque sobreposto, título e preço em destaque ouro.
+- Captura de fotos de produtos direto no celular (Câmera traseira com `capture="environment"` ou Galeria).
+- **Compressão automática via Canvas HTML5**: redimensiona imagens pesadas (4 MB - 15 MB) para no máximo `600x600 px` em WebP/JPEG leve (~30 a 50 KB), salvando no `localStorage` sem travar e sincronizando no Supabase.
+- Miniaturas integradas também nos cards operacionais da aba Estoque.
+- Modal rápido de visualização ampliada (`modalDetalheCatalogo`) com ações diretas de "Vender 1x" e "Editar".
+
+### 2.8 Exportação de Relatórios CSV para Excel e IA (v19/v20)
+- Exportação de relatório tabular com delimitador `;`, codificação UTF-8 com BOM (`\uFEFF`) e decimais com vírgula para abertura direta no Microsoft Excel brasileiro e alimentação de modelos de IA.
 
 ---
 

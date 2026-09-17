@@ -98,3 +98,26 @@ Este documento define as diretrizes técnicas, regras de arquitetura, padrões v
 
 ### Regra 11: Exportação CSV Compatível com Excel & IA
 - Relatórios tabulares de exportação para Excel no Brasil DEVEM utilizar separador ponto e vírgula (`;`), encoding UTF-8 com BOM (`\uFEFF`) e números decimais com vírgula (`,`) para abertura direta no Microsoft Excel sem corrupção de caracteres especiais ou necessidade de assistente de importação.
+
+---
+
+## 5. Diretrizes de Catálogo Visual, Fotos & Inteligência Comercial (v20)
+
+### Regra 12: Compressão Obrigatória de Fotos via Canvas HTML5
+- Fotos capturadas por câmeras de smartphones (4 MB a 15 MB) NUNCA devem ser salvas diretamente no `localStorage` sob risco imediato de `QuotaExceededError`.
+- O aplicativo DEVE processar a imagem localmente via `<canvas>` antes de persistir:
+  - Redimensionamento proporcional para no máximo `600x600 px`;
+  - Conversão para WebP (fallback JPEG) com qualidade calibrada em `0.75`;
+  - A string Base64 resultante deve oscilar entre `30 KB` e `50 KB`, garantindo salvamento síncrono instantâneo no `localStorage` e tráfego leve no Supabase.
+
+### Regra 13: Grade da Vitrine em Blocos (1:1) & Navegação de 5 Abas
+- O Catálogo Visual opera como vitrine primária em blocos quadrados (`aspect-ratio: 1/1`), exibindo foto real (ou placeholder estilizado), badge sobreposto de status de estoque (`un`, `apenas X` ou `esgotado`), título e preço em ouro (`#f59e0b`).
+- A navegação inferior (`.bottom-nav`) acomoda 5 abas (`Catálogo`, `Estoque`, `Vendas`, `Painel`, `Ferramentas`) com `font-size: 10px`, `letter-spacing: -0.02em` e `white-space: nowrap` para evitar qualquer quebra em celulares de tela estreita.
+- O botão flutuante FAB (`+`) deve permanecer visível tanto na aba de Catálogo quanto na de Estoque.
+
+### Regra 14: Modelo Comercial de Alta Margem (Kits e Fracionamento)
+- Evitar vendas isoladas de baixíssimo valor unitário que geram prejuízo operacional de tempo e embalagem.
+- Estratégia de ancoragem:
+  - Velas de 7 dias avulsas no balcão (giro constante) e maços de velas palito c/ 8;
+  - Fracionamento de ervas a granel em saquinhos zip kraft de 40g (margem de contribuição > 150%);
+  - Montagem de kits de presentes em caixas kraft (20x16x5 cm) com unboxing perfumado (Alfazema), elevando o ticket médio para a faixa de R$ 20,00 a R$ 45,00 com markup divisor protegido.

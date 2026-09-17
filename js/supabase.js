@@ -203,7 +203,7 @@ export async function lancarAtualizacaoGeral() {
       // 1. Grava na nuvem para atualizar quem abrir o app depois
       await state.supabase.from('casa_configuracoes').upsert([{
         chave: 'versao_app',
-        valor: { timestamp, solicitante, versao: 'v19.3' },
+        valor: { timestamp, solicitante, versao: 'v20' },
         updated_at: new Date().toISOString()
       }]);
 

@@ -48,8 +48,34 @@
   <!-- Viewport com as Abas -->
   <main class="app-viewport">
 
-    <!-- ABA 1: ESTOQUE E CATÁLOGO -->
-    <section id="tab-estoque" class="tab-view active">
+    <!-- ABA 1: CATÁLOGO E VITRINE VISUAL -->
+    <section id="tab-catalogo" class="tab-view active">
+      <div class="search-box">
+        <i data-lucide="search" style="width: 18px; height: 18px; color: var(--text-muted);"></i>
+        <input type="text" id="catalogSearchInput" class="search-input" placeholder="Buscar na vitrine..." autocomplete="off" autocorrect="off" spellcheck="false" data-form-type="other">
+      </div>
+
+      <div class="categories-bar-wrapper">
+        <div class="pills-bar" id="catalogCategoryPills">
+          <!-- Injetado dinamicamente -->
+        </div>
+        <button type="button" class="btn-manage-cats" id="btnGerenciarCategoriasCatalogo" title="Gerenciar Categorias">
+          <i data-lucide="tags" style="width: 14px; height: 14px;"></i>
+          <span>Categorias</span>
+        </button>
+      </div>
+
+      <div class="catalog-toolbar">
+        <span class="catalog-counter" id="catalogCounter">0 produtos na vitrine</span>
+      </div>
+
+      <div class="catalog-grid" id="catalogGrid">
+        <!-- Injetado dinamicamente via catalogo.js -->
+      </div>
+    </section>
+
+    <!-- ABA 2: CONTROLE DE ESTOQUE OPERACIONAL -->
+    <section id="tab-estoque" class="tab-view">
       <div class="search-box">
         <i data-lucide="search" style="width: 18px; height: 18px; color: var(--text-muted);"></i>
         <input type="text" id="searchInput" class="search-input" placeholder="Buscar por nome ou categoria..." autocomplete="off" autocorrect="off" spellcheck="false" data-form-type="other">
@@ -277,7 +303,11 @@
 
   <!-- Bottom Navigation -->
   <nav class="bottom-nav">
-    <button class="nav-btn active" data-tab="estoque">
+    <button class="nav-btn active" data-tab="catalogo">
+      <i data-lucide="layout-grid"></i>
+      <span>Catálogo</span>
+    </button>
+    <button class="nav-btn" data-tab="estoque">
       <i data-lucide="package"></i>
       <span>Estoque</span>
     </button>
@@ -389,6 +419,38 @@
       <form class="modal-body" autocomplete="off" onsubmit="return false;" novalidate>
         <input type="hidden" id="prodEditId">
         
+        <!-- Foto do Produto (Vitrine) -->
+        <div class="form-group">
+          <label class="form-label">Foto do Produto (Vitrine)</label>
+          <div class="photo-upload-box">
+            <div class="photo-preview-wrap" id="prodPhotoPreview">
+              <div class="photo-placeholder" id="prodPhotoPlaceholder">
+                <i data-lucide="image" style="width: 26px; height: 26px; opacity: 0.4;"></i>
+                <span>Sem foto</span>
+              </div>
+              <img id="prodPhotoImg" src="" alt="Preview da Foto" style="display: none;">
+            </div>
+            <div class="photo-action-buttons">
+              <button type="button" class="btn-photo-action" id="btnCameraPhoto" title="Tirar foto com a câmera">
+                <i data-lucide="camera" style="width: 15px; height: 15px;"></i>
+                <span>Câmera</span>
+              </button>
+              <button type="button" class="btn-photo-action" id="btnGalleryPhoto" title="Escolher da galeria">
+                <i data-lucide="image" style="width: 15px; height: 15px;"></i>
+                <span>Galeria</span>
+              </button>
+              <button type="button" class="btn-photo-action danger" id="btnRemovePhoto" title="Remover foto" style="display: none;">
+                <i data-lucide="trash-2" style="width: 15px; height: 15px;"></i>
+                <span>Remover</span>
+              </button>
+            </div>
+          </div>
+          <!-- Inputs de arquivo ocultos -->
+          <input type="file" id="inputPhotoCamera" accept="image/*" capture="environment" style="display: none;">
+          <input type="file" id="inputPhotoGallery" accept="image/*" style="display: none;">
+          <input type="hidden" id="prodFotoBase64" value="">
+        </div>
+
         <div class="form-group">
           <label class="form-label">Nome do Produto</label>
           <input type="text" id="prodNome" name="item_desc_field" class="form-input" placeholder="Ex: Terço Madeira São Bento" autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false" data-form-type="other" data-lpignore="true" data-1p-ignore="true">
@@ -633,6 +695,46 @@
       <div class="modal-footer" style="gap: 10px;">
         <button type="button" class="btn-cancel" id="btnConfirmModalNao">Cancelar</button>
         <button type="button" class="btn-danger" id="btnConfirmModalSim">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 8: Detalhes Rápidos da Vitrine (Catálogo) -->
+  <div class="modal-overlay" id="modalDetalheCatalogo">
+    <div class="modal-container" style="max-width: 440px;">
+      <div class="modal-header">
+        <div class="modal-title" id="catalogoDetalheNome">Detalhes do Produto</div>
+        <button class="modal-close-btn"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="catalogo-detalhe-banner">
+          <img id="catalogoDetalheImg" src="" alt="Produto" style="display: none;">
+          <div id="catalogoDetalhePlaceholder" class="catalogo-detalhe-placeholder">
+            <i data-lucide="package" style="width: 56px; height: 56px; opacity: 0.35;"></i>
+          </div>
+          <span id="catalogoDetalheBadgeEstoque" class="catalog-stock-pill">0 un</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 4px;">
+          <div>
+            <span class="category-badge" id="catalogoDetalheCategoria">Geral</span>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-size: 11px; color: var(--text-muted); font-weight: 500;">Preço de Venda</div>
+            <div style="font-size: 24px; font-weight: 800; color: var(--primary);" id="catalogoDetalhePreco">R$ 0,00</div>
+          </div>
+        </div>
+        <div style="font-size: 12.5px; color: var(--text-muted); background: var(--surface-card); padding: 10px 14px; border-radius: 10px; display: flex; justify-content: space-between; border: 1px solid var(--border);">
+          <span>Custo Unit.: <strong id="catalogoDetalheCusto" style="color: var(--text); font-weight: 600;">R$ 0,00</strong></span>
+          <span>Estoque Mínimo: <strong id="catalogoDetalheEstoqueMin" style="color: var(--text); font-weight: 600;">0 un</strong></span>
+        </div>
+      </div>
+      <div class="modal-footer" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+        <button type="button" class="btn-cancel" id="btnEditarPeloCatalogo" style="justify-content: center; height: 44px; font-size: 13px; gap: 6px;">
+          <i data-lucide="edit-3" style="width: 16px; height: 16px;"></i> <span>Editar</span>
+        </button>
+        <button type="button" class="btn-main" id="btnVenderPeloCatalogo" style="justify-content: center; height: 44px; font-size: 13px; gap: 6px;">
+          <i data-lucide="shopping-cart" style="width: 16px; height: 16px;"></i> <span>Vender 1x</span>
+        </button>
       </div>
     </div>
   </div>

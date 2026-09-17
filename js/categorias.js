@@ -10,24 +10,27 @@ export function setOnCategoriaAlteradaCallback(fn) {
 }
 
 export function renderizarCategoriasUI() {
-  // 1. Pílulas de filtro no catálogo
-  const pillsBar = document.getElementById('categoryPills');
-  if (pillsBar) {
+  // 1. Pílulas de filtro tanto no Catálogo (vitrine) quanto no Estoque
+  const pillContainers = [
+    document.getElementById('categoryPills'),
+    document.getElementById('catalogCategoryPills')
+  ].filter(Boolean);
+
+  pillContainers.forEach(container => {
     let html = `<div class="pill ${state.categoriaFiltro === 'todos' ? 'active' : ''}" data-cat="todos">Todos</div>`;
     state.categorias.forEach(cat => {
       const active = state.categoriaFiltro === cat ? 'active' : '';
       html += `<div class="pill ${active}" data-cat="${cat}">${cat}</div>`;
     });
-    pillsBar.innerHTML = html;
+    container.innerHTML = html;
 
-    // Attach listeners
-    pillsBar.querySelectorAll('.pill').forEach(pill => {
+    container.querySelectorAll('.pill').forEach(pill => {
       pill.addEventListener('click', () => {
         const cat = pill.getAttribute('data-cat');
-        filtrarCategoria(cat, pill);
+        filtrarCategoria(cat);
       });
     });
-  }
+  });
 
   // 2. Chips interativos de seleção no modal de produto (UI nativa do app sem <select> legado)
   const chipsContainer = document.getElementById('prodCategoryChips');
@@ -83,10 +86,15 @@ export function renderizarCategoriasUI() {
   refreshIcons();
 }
 
-export function filtrarCategoria(cat, elem) {
+export function filtrarCategoria(cat) {
   state.categoriaFiltro = cat;
-  document.querySelectorAll('#categoryPills .pill').forEach(p => p.classList.remove('active'));
-  if (elem) elem.classList.add('active');
+  document.querySelectorAll('.pill[data-cat]').forEach(p => {
+    if (p.getAttribute('data-cat') === cat) {
+      p.classList.add('active');
+    } else {
+      p.classList.remove('active');
+    }
+  });
   if (onCategoriaAlteradaCallback) onCategoriaAlteradaCallback();
 }
 

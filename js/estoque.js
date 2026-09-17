@@ -3,6 +3,7 @@
 import { state, salvarLocal } from './state.js';
 import { formatarMoedaExibicao, parseMonetaryValue, mostrarToast, abrirModal, fecharModalAtual, refreshIcons, pedirConfirmacao } from './utils.js';
 import { renderizarCategoriasUI } from './categorias.js';
+import { comprimirImagem } from './catalogo.js';
 
 let onQuickSellCallback = null;
 
@@ -47,12 +48,21 @@ export function renderizarEstoque() {
       cardAlertClass = 'low-stock';
     }
 
+    const thumbHtml = p.imagem
+      ? `<img src="${p.imagem}" alt="${p.nome}" class="product-mini-thumb" loading="lazy">`
+      : `<div class="product-mini-placeholder"><i data-lucide="package" style="width: 18px; height: 18px; opacity: 0.35;"></i></div>`;
+
     const card = document.createElement('div');
     card.className = `product-card ${cardAlertClass}`;
     card.innerHTML = `
       <div class="product-header">
-        <div class="product-title">${p.nome}</div>
-        <span class="category-badge">${p.categoria}</span>
+        <div class="product-header-left">
+          ${thumbHtml}
+          <div class="product-title-wrap">
+            <div class="product-title">${p.nome}</div>
+            <span class="category-badge">${p.categoria}</span>
+          </div>
+        </div>
       </div>
       <div class="product-details">
         <div>
@@ -92,6 +102,8 @@ export function filtrarProdutos() {
   const input = document.getElementById('searchInput');
   if (input) {
     state.buscaFiltro = input.value;
+    const inputCatalogo = document.getElementById('catalogSearchInput');
+    if (inputCatalogo) inputCatalogo.value = input.value;
     renderizarEstoque();
   }
 }
@@ -118,6 +130,19 @@ export function abrirModalProduto() {
   document.getElementById('prodEstoque').value = '0';
   document.getElementById('prodEstoqueMin').value = '0';
 
+  // Reset de foto do produto
+  const inputFoto = document.getElementById('prodFotoBase64');
+  if (inputFoto) inputFoto.value = '';
+  const imgPreview = document.getElementById('prodPhotoImg');
+  if (imgPreview) {
+    imgPreview.src = '';
+    imgPreview.style.display = 'none';
+  }
+  const placeholder = document.getElementById('prodPhotoPlaceholder');
+  if (placeholder) placeholder.style.display = 'flex';
+  const btnRemove = document.getElementById('btnRemovePhoto');
+  if (btnRemove) btnRemove.style.display = 'none';
+
   const btnDel = document.getElementById('btnExcluirProduto');
   if (btnDel) btnDel.style.display = 'none';
 
@@ -142,6 +167,30 @@ export function editarProduto(id) {
   document.getElementById('prodPrecoVenda').value = formatarMoedaExibicao(p.preco_venda);
   document.getElementById('prodEstoque').value = p.estoque_atual;
   document.getElementById('prodEstoqueMin').value = p.estoque_minimo;
+
+  // Carregar preview de foto se cadastrada
+  const inputFoto = document.getElementById('prodFotoBase64');
+  const imgPreview = document.getElementById('prodPhotoImg');
+  const placeholder = document.getElementById('prodPhotoPlaceholder');
+  const btnRemove = document.getElementById('btnRemovePhoto');
+
+  if (p.imagem) {
+    if (inputFoto) inputFoto.value = p.imagem;
+    if (imgPreview) {
+      imgPreview.src = p.imagem;
+      imgPreview.style.display = 'block';
+    }
+    if (placeholder) placeholder.style.display = 'none';
+    if (btnRemove) btnRemove.style.display = 'inline-flex';
+  } else {
+    if (inputFoto) inputFoto.value = '';
+    if (imgPreview) {
+      imgPreview.src = '';
+      imgPreview.style.display = 'none';
+    }
+    if (placeholder) placeholder.style.display = 'flex';
+    if (btnRemove) btnRemove.style.display = 'none';
+  }
 
   const btnDel = document.getElementById('btnExcluirProduto');
   if (btnDel) btnDel.style.display = 'flex';
@@ -169,6 +218,10 @@ export async function excluirProdutoAtual() {
     mostrarToast(`Produto "${nome}" excluído.`);
     renderizarEstoque();
 
+    if (onProdutoAlteradoCallback) {
+      onProdutoAlteradoCallback();
+    }
+
     if (state.supabase) {
       (async () => {
         try {
@@ -189,6 +242,7 @@ export function salvarProduto() {
   const preco_venda = parseMonetaryValue(document.getElementById('prodPrecoVenda').value);
   const estoque_atual = parseInt(document.getElementById('prodEstoque').value, 10) || 0;
   const estoque_minimo = parseInt(document.getElementById('prodEstoqueMin').value, 10) || 0;
+  const imagem = document.getElementById('prodFotoBase64')?.value || null;
 
   if (!nome || preco_venda <= 0) {
     mostrarToast('Preencha o nome e um preço de venda válido.');
@@ -204,6 +258,7 @@ export function salvarProduto() {
       p.preco_venda = preco_venda;
       p.estoque_atual = estoque_atual;
       p.estoque_minimo = estoque_minimo;
+      p.imagem = imagem;
       p.updated_at = new Date().toISOString();
 
       // Sincroniza o novo nome do produto em todas as vendas já registradas
@@ -222,6 +277,7 @@ export function salvarProduto() {
       preco_venda,
       estoque_atual,
       estoque_minimo,
+      imagem,
       ativo: true,
       created_at: new Date().toISOString()
     };
@@ -252,4 +308,63 @@ export function salvarProduto() {
       }
     })();
   }
+}
+
+/**
+ * Vincula botões de captura de câmera, escolha da galeria e remoção de foto no modal.
+ */
+export function configurarEventosFotoProduto() {
+  const btnCamera = document.getElementById('btnCameraPhoto');
+  const btnGallery = document.getElementById('btnGalleryPhoto');
+  const inputCamera = document.getElementById('inputPhotoCamera');
+  const inputGallery = document.getElementById('inputPhotoGallery');
+  const btnRemove = document.getElementById('btnRemovePhoto');
+  const inputFoto = document.getElementById('prodFotoBase64');
+  const imgPreview = document.getElementById('prodPhotoImg');
+  const placeholder = document.getElementById('prodPhotoPlaceholder');
+
+  btnCamera?.addEventListener('click', () => inputCamera?.click());
+  btnGallery?.addEventListener('click', () => inputGallery?.click());
+
+  const processarArquivo = async (file) => {
+    if (!file) return;
+    try {
+      mostrarToast('Otimizando imagem para a vitrine...');
+      const base64Otimizada = await comprimirImagem(file);
+      if (inputFoto) inputFoto.value = base64Otimizada;
+      if (imgPreview) {
+        imgPreview.src = base64Otimizada;
+        imgPreview.style.display = 'block';
+      }
+      if (placeholder) placeholder.style.display = 'none';
+      if (btnRemove) btnRemove.style.display = 'inline-flex';
+      mostrarToast('Foto adicionada com sucesso!');
+    } catch (err) {
+      console.warn('[Foto] Erro ao comprimir:', err);
+      mostrarToast('Não foi possível processar a foto.');
+    }
+  };
+
+  inputCamera?.addEventListener('change', (e) => {
+    const file = e.target.files?.[0];
+    if (file) processarArquivo(file);
+    e.target.value = '';
+  });
+
+  inputGallery?.addEventListener('change', (e) => {
+    const file = e.target.files?.[0];
+    if (file) processarArquivo(file);
+    e.target.value = '';
+  });
+
+  btnRemove?.addEventListener('click', () => {
+    if (inputFoto) inputFoto.value = '';
+    if (imgPreview) {
+      imgPreview.src = '';
+      imgPreview.style.display = 'none';
+    }
+    if (placeholder) placeholder.style.display = 'flex';
+    if (btnRemove) btnRemove.style.display = 'none';
+    mostrarToast('Foto removida.');
+  });
 }

@@ -17,9 +17,13 @@ CREATE TABLE public.casa_produtos (
   estoque_atual INT NOT NULL DEFAULT 0,
   estoque_minimo INT NOT NULL DEFAULT 2,
   ativo BOOLEAN NOT NULL DEFAULT true,
+  imagem TEXT, -- Data URL comprimida Base64 ou URL pública de foto do catálogo
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Garantir coluna em bancos existentes sem quebrar dados anteriores
+ALTER TABLE public.casa_produtos ADD COLUMN IF NOT EXISTS imagem TEXT;
 
 CREATE TABLE public.casa_vendas (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

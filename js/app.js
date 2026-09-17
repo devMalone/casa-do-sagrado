@@ -4,7 +4,8 @@ import { state, carregarDadosLocais, salvarLocal } from './state.js';
 import { abrirModal, fecharModalAtual, mostrarToast, refreshIcons, aplicarMascaraMoeda, forcarAtualizacaoLocal } from './utils.js';
 import { iniciarSupabaseSeConfigurado, alternarConexaoSupabase, exportarBackupJSON, exportarRelatorioCSV, setAppRenderCallback, lancarAtualizacaoGeral } from './supabase.js';
 import { renderizarCategoriasUI, adicionarCategoria, abrirModalCategorias, setOnCategoriaAlteradaCallback } from './categorias.js';
-import { renderizarEstoque, filtrarProdutos, abrirModalProduto, salvarProduto, setOnQuickSellCallback, excluirProdutoAtual, setOnProdutoAlteradoCallback } from './estoque.js';
+import { renderizarEstoque, filtrarProdutos, abrirModalProduto, salvarProduto, setOnQuickSellCallback, excluirProdutoAtual, setOnProdutoAlteradoCallback, configurarEventosFotoProduto } from './estoque.js';
+import { renderizarCatalogo, configurarEventosCatalogo, setOnCatalogQuickSellCallback } from './catalogo.js';
 import { iniciarVendaRapida, ajustarQtdVenda, selecionarMetodoPgto, confirmarVendaFinal, renderizarHistoricoVendas, setOnVendaRealizadaCallback, limparTodoHistoricoVendas } from './vendas.js';
 import { renderizarDashboard, abrirModalConfigReserva, salvarConfigReserva, abrirModalConfigEquilibrio, adicionarItemCustoFixo, atualizarDiasUteisMes } from './dashboard.js';
 import { recalcularMarkup, copiarPrecoParaNovoProduto } from './markup.js';
@@ -77,14 +78,16 @@ function sincronizarAlturaViewport() {
 
 function configurarCallbacks() {
   setAppRenderCallback(renderizarTudo);
-  setOnCategoriaAlteradaCallback(renderizarEstoque);
+  setOnCategoriaAlteradaCallback(renderizarTudo);
   setOnQuickSellCallback(iniciarVendaRapida);
+  setOnCatalogQuickSellCallback(iniciarVendaRapida);
   setOnVendaRealizadaCallback(renderizarTudo);
   setOnProdutoAlteradoCallback(renderizarTudo);
 }
 
 function renderizarTudo() {
   renderizarCategoriasUI();
+  renderizarCatalogo();
   renderizarEstoque();
   renderizarDashboard();
   renderizarHistoricoVendas();
@@ -150,9 +153,11 @@ function mudarAba(abaId, btn) {
 
   const fab = document.getElementById('fabAddProduct');
   if (fab) {
-    fab.style.display = abaId === 'estoque' ? 'flex' : 'none';
+    fab.style.display = (abaId === 'catalogo' || abaId === 'estoque') ? 'flex' : 'none';
   }
 
+  if (abaId === 'catalogo') renderizarCatalogo();
+  if (abaId === 'estoque') renderizarEstoque();
   if (abaId === 'dashboard') renderizarDashboard();
   if (abaId === 'vendas') renderizarHistoricoVendas();
   if (abaId === 'ferramentas') {
@@ -200,6 +205,7 @@ function vincularEventosGlobais() {
 
   // Categorias
   document.getElementById('btnGerenciarCategorias')?.addEventListener('click', abrirModalCategorias);
+  document.getElementById('btnGerenciarCategoriasCatalogo')?.addEventListener('click', abrirModalCategorias);
   document.getElementById('btnAdicionarCategoria')?.addEventListener('click', adicionarCategoria);
   document.getElementById('inputNovaCategoria')?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') adicionarCategoria();
@@ -210,6 +216,10 @@ function vincularEventosGlobais() {
   document.getElementById('fabAddProduct')?.addEventListener('click', abrirModalProduto);
   document.getElementById('btnSalvarProduto')?.addEventListener('click', salvarProduto);
   document.getElementById('btnExcluirProduto')?.addEventListener('click', excluirProdutoAtual);
+
+  // Catálogo (Vitrine) e Captura de Fotos
+  configurarEventosCatalogo();
+  configurarEventosFotoProduto();
 
   // Máscaras Monetárias de Produtos
   document.getElementById('prodPrecoCusto')?.addEventListener('input', function() {

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'casa-sagrado-v19.3';
+const CACHE_NAME = 'casa-sagrado-v20';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -9,6 +9,7 @@ const ASSETS_TO_CACHE = [
   './css/components.css',
   './css/modals.css',
   './js/app.js',
+  './js/catalogo.js',
   './js/state.js',
   './js/utils.js',
   './js/supabase.js',

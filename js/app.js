@@ -2,7 +2,7 @@
 
 import { state, carregarDadosLocais, salvarLocal } from './state.js';
 import { abrirModal, fecharModalAtual, mostrarToast, refreshIcons, aplicarMascaraMoeda, forcarAtualizacaoLocal } from './utils.js';
-import { iniciarSupabaseSeConfigurado, alternarConexaoSupabase, exportarBackupJSON, exportarRelatorioCSV, setAppRenderCallback, lancarAtualizacaoGeral } from './supabase.js';
+import { iniciarSupabaseSeConfigurado, alternarConexaoSupabase, exportarBackupJSON, exportarRelatorioCSV, setAppRenderCallback, lancarAtualizacaoGeral, sincronizarTudoSilenciosamente, forcarSincronizacaoManual } from './supabase.js';
 import { renderizarCategoriasUI, adicionarCategoria, abrirModalCategorias, setOnCategoriaAlteradaCallback } from './categorias.js';
 import { renderizarEstoque, filtrarProdutos, abrirModalProduto, salvarProduto, setOnQuickSellCallback, excluirProdutoAtual, setOnProdutoAlteradoCallback, configurarEventosFotoProduto } from './estoque.js';
 import { renderizarCatalogo, configurarEventosCatalogo, setOnCatalogQuickSellCallback } from './catalogo.js';
@@ -34,6 +34,17 @@ document.addEventListener('DOMContentLoaded', () => {
   verificarOperadorOnboarding();
   iniciarSupabaseSeConfigurado();
   renderizarTudo();
+
+  // Sincronização automática ao retornar ao app, reconectar rede ou periódico (fallback mobile)
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      sincronizarTudoSilenciosamente();
+    }
+  });
+  window.addEventListener('online', () => {
+    sincronizarTudoSilenciosamente();
+  });
+  setInterval(sincronizarTudoSilenciosamente, 25000);
 
   // Registro do Service Worker
   if ('serviceWorker' in navigator) {
@@ -177,6 +188,7 @@ function vincularEventosGlobais() {
   // Nuvem / Supabase & Atualizações
   document.getElementById('btnAbrirSync')?.addEventListener('click', () => abrirModal('modalSync'));
   document.getElementById('btnSalvarSupabase')?.addEventListener('click', alternarConexaoSupabase);
+  document.getElementById('btnForcarSyncManual')?.addEventListener('click', forcarSincronizacaoManual);
   document.getElementById('btnExportarBackup')?.addEventListener('click', exportarBackupJSON);
   document.getElementById('btnExportarCSVSync')?.addEventListener('click', exportarRelatorioCSV);
   document.getElementById('btnExportarVendasCSV')?.addEventListener('click', exportarRelatorioCSV);

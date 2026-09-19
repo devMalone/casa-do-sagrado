@@ -4,6 +4,7 @@ import { state, salvarLocal } from './state.js';
 import { formatarMoedaExibicao, parseMonetaryValue, mostrarToast, abrirModal, fecharModalAtual, refreshIcons, pedirConfirmacao } from './utils.js';
 import { renderizarCategoriasUI } from './categorias.js';
 import { comprimirImagem } from './catalogo.js';
+import { salvarProdutoNuvem } from './supabase.js';
 
 let onQuickSellCallback = null;
 
@@ -298,7 +299,7 @@ export function salvarProduto() {
       try {
         const itemSalvo = id ? state.produtos.find(prod => prod.id === id) : state.produtos[0];
         if (itemSalvo) {
-          await state.supabase.from('casa_produtos').upsert([itemSalvo]);
+          await salvarProdutoNuvem(itemSalvo);
         }
         if (id) {
           await state.supabase.from('casa_vendas').update({ nome_produto: nome }).eq('produto_id', id);

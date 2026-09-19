@@ -93,10 +93,24 @@ export async function confirmarVendaFinal() {
   if (state.supabase) {
     (async () => {
       try {
-        await state.supabase.rpc('casa_dar_baixa_venda', {
-          p_produto_id: p.id,
-          p_qtd: qtd
-        });
+        let rpcOk = false;
+        try {
+          const { error: errRpc } = await state.supabase.rpc('casa_dar_baixa_venda', {
+            p_produto_id: p.id,
+            p_qtd: qtd
+          });
+          if (!errRpc) rpcOk = true;
+        } catch (eRpc) {}
+
+        // Fallback: se RPC falhar (ex: produto recém-adicionado sem trigger), atualiza estoque direto
+        if (!rpcOk) {
+          try {
+            await state.supabase.from('casa_produtos')
+              .update({ estoque_atual: p.estoque_atual, updated_at: new Date().toISOString() })
+              .eq('id', p.id);
+          } catch (eUp) {}
+        }
+
         await state.supabase.from('casa_vendas').insert([novaVenda]);
         console.log('[Sync] Venda sincronizada com sucesso');
       } catch (err) {

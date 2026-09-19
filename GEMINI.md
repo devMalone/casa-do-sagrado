@@ -121,3 +121,13 @@ Este documento define as diretrizes técnicas, regras de arquitetura, padrões v
   - Velas de 7 dias avulsas no balcão (giro constante) e maços de velas palito c/ 8;
   - Fracionamento de ervas a granel em saquinhos zip kraft de 40g (margem de contribuição > 150%);
   - Montagem de kits de presentes em caixas kraft (20x16x5 cm) com unboxing perfumado (Alfazema), elevando o ticket médio para a faixa de R$ 20,00 a R$ 45,00 com markup divisor protegido.
+
+---
+
+## 6. Diretrizes de Sincronização Resiliente & Nuvem (v20.1)
+
+### Regra 15: Resiliência de Schema & Reconciliação Bi-direcional
+- **Degradação Graciosa de Colunas:** Se uma coluna opcional (como `imagem`) ainda não existir no schema do Supabase (erro `PGRST204`), o cliente DEVE capturar o erro, remover a propriedade do payload e salvar os dados cadastrais essenciais (nome, estoque, preços, categoria) imediatamente, sem falhar silenciosamente nem impedir a sincronização do estoque entre aparelhos.
+- **Reconciliação Bi-direcional:** Ao abrir o app ou restaurar conexão, o sistema compara dados da nuvem e do cache local. Itens criados localmente que ainda não existam no Supabase são enviados automaticamente.
+- **Ciclo de Vida Mobile:** Dispositivos móveis suspendem WebSockets ao bloquear tela ou trocar de app. Portanto, o app DEVE escutar `visibilitychange` (`visible`), evento `online` e rodar heartbeat leve periódico (a cada 25s) para garantir sincronismo contínuo sem depender de reload manual.
+

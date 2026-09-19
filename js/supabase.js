@@ -129,8 +129,48 @@ export function alternarConexaoSupabase() {
 
 export const salvarConfigSupabase = alternarConexaoSupabase;
 
+/**
+ * Salva ou atualiza um produto no Supabase com resiliência total.
+ * Se a coluna 'imagem' ainda não existir no banco (erro PGRST204),
+ * retira o campo 'imagem' e retenta imediatamente, garantindo que o produto
+ * e seu estoque NUNCA deixem de sincronizar entre os aparelhos.
+ */
+export async function salvarProdutoNuvem(prod) {
+  if (!state.supabase || !prod) return false;
+  try {
+    const { error } = await state.supabase.from('casa_produtos').upsert([prod]);
+    if (error) {
+      console.warn('[Sync] Upsert completo de produto falhou:', error);
+      // Fallback gracioso: coluna 'imagem' ausente no schema cache
+      if (error.code === 'PGRST204' || (error.message && error.message.includes('imagem'))) {
+        console.info('[Sync] Coluna imagem ausente na nuvem. Salvando dados cadastrais e estoque...');
+        const sanitizado = { ...prod };
+        delete sanitizado.imagem;
+        const { error: errRetry } = await state.supabase.from('casa_produtos').upsert([sanitizado]);
+        if (errRetry) {
+          console.error('[Sync] Falha crítica ao salvar produto sem imagem:', errRetry);
+          return false;
+        }
+        return true;
+      }
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.warn('[Sync] Exceção ao salvar produto na nuvem:', err);
+    return false;
+  }
+}
+
 export function conectarRealtime() {
   if (!state.supabase) return;
+
+  if (realtimeChannel) {
+    try {
+      state.supabase.removeChannel(realtimeChannel);
+    } catch (e) {}
+    realtimeChannel = null;
+  }
 
   realtimeChannel = state.supabase.channel('casa-sagrado-channel');
 
@@ -138,16 +178,11 @@ export function conectarRealtime() {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'casa_produtos' }, payload => {
       sincronizarProdutoRealtime(payload);
     })
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'casa_vendas' }, payload => {
-      sincronizarVendaRealtime(payload.new);
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'casa_vendas' }, payload => {
+      sincronizarVendaRealtime(payload);
     })
-    .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'casa_vendas' }, payload => {
-      const idRemovido = payload.old?.id;
-      if (idRemovido) {
-        state.vendas = state.vendas.filter(v => v.id !== idRemovido);
-        salvarLocal();
-        if (appRenderCallback) appRenderCallback();
-      }
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'casa_configuracoes' }, payload => {
+      sincronizarConfigRealtime(payload);
     })
     // Broadcast em tempo real para forçar atualização em massa em todos os aparelhos
     .on('broadcast', { event: 'comando_forcar_update' }, async (event) => {
@@ -158,7 +193,15 @@ export function conectarRealtime() {
         await forcarAtualizacaoLocal(false);
       }, 1500);
     })
-    .subscribe();
+    .subscribe((status) => {
+      console.log('[Realtime] Status do canal:', status);
+      const dot = document.getElementById('syncStatusDot');
+      if (status === 'SUBSCRIBED') {
+        if (dot) dot.classList.add('online');
+      } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+        if (dot) dot.classList.remove('online');
+      }
+    });
 }
 
 function sincronizarProdutoRealtime(payload) {
@@ -166,18 +209,67 @@ function sincronizarProdutoRealtime(payload) {
     const item = payload.new;
     const idx = state.produtos.findIndex(p => p.id === item.id);
     if (idx >= 0) {
+      // Se a imagem veio vazia da nuvem mas existe em cache local, preserva
+      const imgLocal = state.produtos[idx].imagem;
       state.produtos[idx] = { ...state.produtos[idx], ...item };
+      if (!state.produtos[idx].imagem && imgLocal) {
+        state.produtos[idx].imagem = imgLocal;
+      }
     } else {
       state.produtos.unshift(item);
     }
     salvarLocal();
     if (appRenderCallback) appRenderCallback();
+  } else if (payload.eventType === 'DELETE') {
+    const idRemovido = payload.old?.id;
+    if (idRemovido) {
+      state.produtos = state.produtos.filter(p => p.id !== idRemovido);
+      salvarLocal();
+      if (appRenderCallback) appRenderCallback();
+    }
   }
 }
 
-function sincronizarVendaRealtime(novaVenda) {
-  if (!state.vendas.some(v => v.id === novaVenda.id)) {
-    state.vendas.unshift(novaVenda);
+function sincronizarVendaRealtime(payload) {
+  if (payload.eventType === 'INSERT') {
+    const novaVenda = payload.new;
+    if (!state.vendas.some(v => v.id === novaVenda.id)) {
+      state.vendas.unshift(novaVenda);
+      salvarLocal();
+      if (appRenderCallback) appRenderCallback();
+    }
+  } else if (payload.eventType === 'UPDATE') {
+    const vendaAtualizada = payload.new;
+    const idx = state.vendas.findIndex(v => v.id === vendaAtualizada.id);
+    if (idx >= 0) {
+      state.vendas[idx] = { ...state.vendas[idx], ...vendaAtualizada };
+      salvarLocal();
+      if (appRenderCallback) appRenderCallback();
+    }
+  } else if (payload.eventType === 'DELETE') {
+    const idRemovido = payload.old?.id;
+    if (idRemovido) {
+      state.vendas = state.vendas.filter(v => v.id !== idRemovido);
+      salvarLocal();
+      if (appRenderCallback) appRenderCallback();
+    }
+  }
+}
+
+function sincronizarConfigRealtime(payload) {
+  if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+    const c = payload.new;
+    if (!c || !c.chave) return;
+    if (c.chave === 'categorias' && Array.isArray(c.valor)) {
+      state.categorias = c.valor;
+    } else if (c.chave === 'fundo_reserva' && c.valor) {
+      state.config = { ...state.config, ...c.valor };
+    } else if (c.chave === 'custos_fixos' && c.valor) {
+      state.config.custosFixos = {
+        itens: Array.isArray(c.valor.itens) ? c.valor.itens : [],
+        diasUteisMes: Math.max(1, parseInt(c.valor.diasUteisMes, 10) || 26)
+      };
+    }
     salvarLocal();
     if (appRenderCallback) appRenderCallback();
   }
@@ -203,7 +295,7 @@ export async function lancarAtualizacaoGeral() {
       // 1. Grava na nuvem para atualizar quem abrir o app depois
       await state.supabase.from('casa_configuracoes').upsert([{
         chave: 'versao_app',
-        valor: { timestamp, solicitante, versao: 'v20' },
+        valor: { timestamp, solicitante, versao: 'v20.1' },
         updated_at: new Date().toISOString()
       }]);
 
@@ -227,6 +319,12 @@ export async function lancarAtualizacaoGeral() {
   }, 1000);
 }
 
+/**
+ * Reconciliação bi-direcional completa:
+ * - Baixa produtos, vendas e configurações da nuvem.
+ * - Detecta produtos/vendas criados localmente que não subiram e sobe-os automaticamente.
+ * - Respeita coleções vazias legítimas e preserva fotos em cache local.
+ */
 export async function baixarDadosIniciaisNuvem() {
   if (!state.supabase) return;
   try {
@@ -264,23 +362,95 @@ export async function baixarDadosIniciaisNuvem() {
       salvarLocal();
     }
 
-    // 2. Baixa produtos
-    const { data: prods } = await state.supabase.from('casa_produtos').select('*');
-    if (prods && prods.length > 0) {
-      state.produtos = prods;
+    // 2. Reconciliação de Produtos (Nuvem ⇄ Local)
+    const { data: prods, error: errProds } = await state.supabase.from('casa_produtos').select('*');
+    if (!errProds && Array.isArray(prods)) {
+      const idsNuvem = new Set(prods.map(p => p.id));
+      
+      // Se temos produtos locais que NÃO estão na nuvem (ex: erro anterior de coluna ou cadastro offline), envia-os!
+      const locaisNaoSincronizados = state.produtos.filter(p => !idsNuvem.has(p.id));
+      if (locaisNaoSincronizados.length > 0) {
+        console.log(`[Sync] Enviando ${locaisNaoSincronizados.length} produto(s) pendente(s) para a nuvem...`);
+        for (const p of locaisNaoSincronizados) {
+          await salvarProdutoNuvem(p);
+        }
+        const { data: prodsAtualizados } = await state.supabase.from('casa_produtos').select('*');
+        if (prodsAtualizados) {
+          state.produtos = prodsAtualizados.map(np => {
+            const localMatch = state.produtos.find(lp => lp.id === np.id);
+            if (localMatch && localMatch.imagem && !np.imagem) {
+              return { ...np, imagem: localMatch.imagem };
+            }
+            return np;
+          });
+        }
+      } else if (prods.length > 0) {
+        // Nuvem tem produtos: atualiza local preservando fotos locais se houver
+        state.produtos = prods.map(np => {
+          const localMatch = state.produtos.find(lp => lp.id === np.id);
+          if (localMatch && localMatch.imagem && !np.imagem) {
+            return { ...np, imagem: localMatch.imagem };
+          }
+          return np;
+        });
+      } else if (prods.length === 0 && state.produtos.length === 0) {
+        state.produtos = [];
+      }
       salvarLocal();
     }
 
-    // 3. Baixa vendas (aceita array vazio para sincronizar exclusão/reset com sucesso)
+    // 3. Reconciliação de Vendas (Nuvem ⇄ Local)
     const { data: sales, error: errSales } = await state.supabase.from('casa_vendas').select('*').order('created_at', { ascending: false });
     if (!errSales && Array.isArray(sales)) {
-      state.vendas = sales;
+      const idsSalesNuvem = new Set(sales.map(s => s.id));
+      const vendasLocaisNaoSubiram = state.vendas.filter(v => v.id && !idsSalesNuvem.has(v.id));
+      if (vendasLocaisNaoSubiram.length > 0) {
+        console.log(`[Sync] Enviando ${vendasLocaisNaoSubiram.length} venda(s) pendente(s) para a nuvem...`);
+        for (const v of vendasLocaisNaoSubiram) {
+          try { await state.supabase.from('casa_vendas').insert([v]); } catch (e) {}
+        }
+        const { data: salesAtualizadas } = await state.supabase.from('casa_vendas').select('*').order('created_at', { ascending: false });
+        if (salesAtualizadas) {
+          state.vendas = salesAtualizadas;
+        }
+      } else {
+        state.vendas = sales;
+      }
       salvarLocal();
     }
 
     if (appRenderCallback) appRenderCallback();
   } catch (err) {
     console.warn('[Sync] Falha ao carregar dados iniciais da nuvem:', err);
+  }
+}
+
+/**
+ * Sincronização silenciosa acionada em retorno do foco ou heartbeat
+ */
+export async function sincronizarTudoSilenciosamente() {
+  if (!state.supabase || document.visibilityState === 'hidden') return;
+  try {
+    await baixarDadosIniciaisNuvem();
+  } catch (e) {
+    console.debug('[Sync] Sync silencioso:', e);
+  }
+}
+
+/**
+ * Força sincronização imediata manual com toast feedback
+ */
+export async function forcarSincronizacaoManual() {
+  if (!state.supabase) {
+    mostrarToast('Supabase não conectado. Conecte primeiro.');
+    return;
+  }
+  mostrarToast('Sincronizando com a nuvem...');
+  try {
+    await baixarDadosIniciaisNuvem();
+    mostrarToast(`Nuvem sincronizada! ${state.produtos.length} produtos e ${state.vendas.length} vendas.`);
+  } catch (err) {
+    mostrarToast('Falha na sincronização. Verifique a internet.');
   }
 }
 

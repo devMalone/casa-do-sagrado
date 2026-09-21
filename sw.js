@@ -1,4 +1,5 @@
-const CACHE_NAME = 'casa-sagrado-v20.1';
+const APP_VERSION = '23.4';
+const CACHE_NAME = `casa-sagrado-v${APP_VERSION}`;
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -8,10 +9,13 @@ const ASSETS_TO_CACHE = [
   './css/base.css',
   './css/components.css',
   './css/modals.css',
+  './js/version.js',
   './js/app.js',
   './js/catalogo.js',
   './js/state.js',
   './js/utils.js',
+  './js/indexed_db.js',
+  './js/sync_engine.js',
   './js/supabase.js',
   './js/categorias.js',
   './js/estoque.js',
@@ -22,6 +26,12 @@ const ASSETS_TO_CACHE = [
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',
   'https://unpkg.com/lucide@latest'
 ];
+
+self.addEventListener('message', (event) => {
+  if (event.data === 'SKIP_WAITING' || event.data?.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -49,7 +59,9 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((keys) => {
       return Promise.all(
         keys.map((key) => {
-          if (key !== CACHE_NAME) {
+          // Limpa estritamente versões anteriores deste mesmo aplicativo
+          if (key.startsWith('casa-sagrado-') && key !== CACHE_NAME) {
+            console.log('[SW] Removendo cache legado da aplicação:', key);
             return caches.delete(key);
           }
         })
@@ -61,6 +73,12 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.url.includes('supabase.co')) {
+    return;
+  }
+
+  // Manifesto de versão do servidor NUNCA é retido pelo cache do Service Worker
+  if (event.request.url.includes('version.json')) {
+    event.respondWith(fetch(event.request, { cache: 'no-store' }));
     return;
   }
 

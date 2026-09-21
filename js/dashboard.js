@@ -1,7 +1,6 @@
-// js/dashboard.js — Métricas Financeiras, Fundo de Reserva & Ponto de Equilíbrio
-
-import { state, salvarLocal } from './state.js';
+import { state, salvarLocal, enfileirarMutacao } from './state.js';
 import { formatarMoedaExibicao, parseMonetaryValue, mostrarToast, abrirModal, fecharModalAtual, refreshIcons } from './utils.js';
+import { processarOutbox, logSync } from './sync_engine.js';
 
 export function renderizarDashboard() {
   let faturamento = 0;
@@ -188,19 +187,16 @@ export function salvarConfigReserva() {
   mostrarToast('Parâmetros do Fundo de Reserva atualizados!');
   renderizarDashboard();
 
-  if (state.supabase) {
-    (async () => {
-      try {
-        await state.supabase.from('casa_configuracoes').upsert({
-          chave: 'fundo_reserva',
-          valor: state.config,
-          updated_at: new Date().toISOString()
-        });
-      } catch (err) {
-        console.warn('[Sync] Erro ao sincronizar meta de reserva:', err);
-      }
-    })();
-  }
+  enfileirarMutacao('CONFIG_UPSERT', 'configuracoes', 'fundo_reserva', {
+    chave: 'fundo_reserva',
+    valor: {
+      tetoReserva: meta,
+      percentualReserva: pct
+    }
+  });
+
+  logSync('LOCAL', 'Parâmetros de reserva salvos localmente e enfileirados.');
+  processarOutbox();
 }
 
 // --- MODAL DE PONTO DE EQUILÍBRIO & CUSTOS FIXOS ---
@@ -344,18 +340,11 @@ export function atualizarDiasUteisMes(val) {
 }
 
 function sincronizarCustosFixosNuvem() {
-  if (state.supabase) {
-    (async () => {
-      try {
-        await state.supabase.from('casa_configuracoes').upsert({
-          chave: 'custos_fixos',
-          valor: state.config.custosFixos,
-          updated_at: new Date().toISOString()
-        });
-      } catch (err) {
-        console.warn('[Sync] Erro ao sincronizar custos fixos:', err);
-      }
-    })();
-  }
+  enfileirarMutacao('CONFIG_UPSERT', 'configuracoes', 'custos_fixos', {
+    chave: 'custos_fixos',
+    valor: state.config.custosFixos
+  });
+  logSync('LOCAL', 'Configuração de custos fixos salva localmente e enfileirada.');
+  processarOutbox();
 }
 

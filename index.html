@@ -8,6 +8,12 @@
   <meta name="theme-color" content="#0b0f17">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Casa do Sagrado">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png">
+  <link rel="apple-touch-icon" sizes="512x512" href="icon-512.png">
+  <meta name="format-detection" content="telephone=no">
+  <meta name="mobile-web-app-capable" content="yes">
   <link rel="icon" type="image/png" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23f59e0b'><circle cx='12' cy='12' r='10'/></svg>">
   
   <!-- Estilos Modulares -->
@@ -65,6 +71,13 @@
         </button>
       </div>
 
+      <!-- Barra de Subcategorias da Vitrine (Visível quando a categoria ativa tem subcategorias) -->
+      <div class="subcategories-bar-wrapper" id="catalogSubcatWrapper" style="display: none;">
+        <div class="pills-bar subcat-pills" id="catalogSubcategoryPills">
+          <!-- Injetado dinamicamente -->
+        </div>
+      </div>
+
       <div class="catalog-toolbar">
         <span class="catalog-counter" id="catalogCounter">0 produtos na vitrine</span>
       </div>
@@ -89,6 +102,13 @@
           <i data-lucide="tags" style="width: 14px; height: 14px;"></i>
           <span>Categorias</span>
         </button>
+      </div>
+
+      <!-- Barra de Subcategorias do Estoque (Visível quando a categoria ativa tem subcategorias) -->
+      <div class="subcategories-bar-wrapper" id="stockSubcatWrapper" style="display: none;">
+        <div class="pills-bar subcat-pills" id="stockSubcategoryPills">
+          <!-- Injetado dinamicamente -->
+        </div>
       </div>
 
       <div class="products-grid" id="productsList">
@@ -360,6 +380,17 @@
         <button class="modal-close-btn"><i data-lucide="x"></i></button>
       </div>
       <div class="modal-body">
+        <!-- Resumo visual do produto/variante selecionada -->
+        <div class="venda-prod-resumo-card" id="vendaProdResumoCard" style="display: flex; align-items: center; gap: 12px; padding: 10px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; margin-bottom: 12px;">
+          <div class="venda-prod-thumb" id="vendaProdThumb" style="width: 44px; height: 44px; border-radius: 8px; overflow: hidden; background: rgba(0,0,0,0.25); display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 1px solid rgba(255,255,255,0.1);">
+            <i data-lucide="package" style="width: 20px; height: 20px; opacity: 0.4;"></i>
+          </div>
+          <div style="flex: 1; min-width: 0;">
+            <div id="vendaProdNomeDestaque" style="font-size: 14px; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></div>
+            <div id="vendaProdVarianteDestaque" style="font-size: 12px; color: var(--primary); font-weight: 600;"></div>
+          </div>
+        </div>
+
         <div style="display: flex; justify-content: space-between; align-items: center;">
           <span style="font-size: 13px; color: var(--text-muted);">Preço Unitário:</span>
           <span style="font-size: 18px; font-weight: 800; color: var(--primary);" id="vendaPrecoUnit">R$ 0,00</span>
@@ -439,6 +470,10 @@
                 <i data-lucide="image" style="width: 15px; height: 15px;"></i>
                 <span>Galeria</span>
               </button>
+              <button type="button" class="btn-photo-action" id="btnRecortarFoto" title="Reenquadrar foto atual" style="display: none;">
+                <i data-lucide="crop" style="width: 15px; height: 15px;"></i>
+                <span>Enquadrar</span>
+              </button>
               <button type="button" class="btn-photo-action danger" id="btnRemovePhoto" title="Remover foto" style="display: none;">
                 <i data-lucide="trash-2" style="width: 15px; height: 15px;"></i>
                 <span>Remover</span>
@@ -453,14 +488,49 @@
 
         <div class="form-group">
           <label class="form-label">Nome do Produto</label>
-          <input type="text" id="prodNome" name="item_desc_field" class="form-input" placeholder="Ex: Terço Madeira São Bento" autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false" data-form-type="other" data-lpignore="true" data-1p-ignore="true">
+          <input type="text" id="prodNome" name="item_desc_field" class="form-input" placeholder="Ex: Vela 7 Dias Branca" autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false" data-form-type="other" data-lpignore="true" data-1p-ignore="true">
         </div>
 
+        <!-- Categoria Principal com criação rápida inline -->
         <div class="form-group">
-          <label class="form-label">Categoria</label>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+            <label class="form-label" style="margin-bottom: 0;">Categoria Principal</label>
+            <button type="button" class="btn-inline-add" id="btnNovaCategoriaInline" title="Criar categoria sem sair da tela">
+              <i data-lucide="plus" style="width: 13px; height: 13px;"></i> Nova Categoria
+            </button>
+          </div>
           <input type="hidden" id="prodCategoria" value="">
           <div class="category-select-chips" id="prodCategoryChips">
-            <!-- Injetado dinamicamente no visual do app -->
+            <!-- Injetado dinamicamente -->
+          </div>
+        </div>
+
+        <!-- Subcategoria Opcional com criação rápida inline -->
+        <div class="form-group" id="groupProdSubcategoria">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+            <label class="form-label" style="margin-bottom: 0;">Subcategoria (Opcional)</label>
+            <button type="button" class="btn-inline-add" id="btnNovaSubcategoriaInline" title="Criar subcategoria vinculada à categoria atual">
+              <i data-lucide="plus" style="width: 13px; height: 13px;"></i> Nova Subcategoria
+            </button>
+          </div>
+          <input type="hidden" id="prodSubcategoria" value="">
+          <div class="category-select-chips" id="prodSubcategoryChips">
+            <!-- Injetado dinamicamente -->
+          </div>
+        </div>
+
+        <!-- SKU Comercial e Código de Barras (Campos Independentes) -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <div class="form-group">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+              <label class="form-label" style="margin-bottom: 0;">SKU (Código Interno)</label>
+              <span id="prodSkuBadge" style="font-size: 10px; font-weight: 600; color: var(--accent); background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: 4px; padding: 1px 5px;">Gerado automaticamente</span>
+            </div>
+            <input type="text" id="prodSku" name="prod_sku_field" class="form-input" placeholder="Ex: VEL-000101" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" data-form-type="other" style="font-family: monospace; font-weight: 600; letter-spacing: 0.5px;">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Código de Barras (Opcional)</label>
+            <input type="text" id="prodCodigoBarras" name="prod_codbarras_field" class="form-input" placeholder="EAN / GTIN / Leitor" autocomplete="off" autocorrect="off" spellcheck="false" data-form-type="other">
           </div>
         </div>
 
@@ -477,12 +547,44 @@
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
           <div class="form-group">
-            <label class="form-label">Estoque Inicial</label>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <label class="form-label">Estoque Total</label>
+              <span id="prodEstoqueVariacoesBadge" style="display: none; font-size: 10.5px; color: var(--accent); font-weight: 600;">Soma variações</span>
+            </div>
             <input type="number" id="prodEstoque" name="item_est_field" class="form-input" value="0" min="0" autocomplete="off" autocorrect="off" spellcheck="false" data-form-type="other">
           </div>
           <div class="form-group">
             <label class="form-label">Estoque Mínimo</label>
             <input type="number" id="prodEstoqueMin" name="item_estmin_field" class="form-input" value="0" min="0" autocomplete="off" autocorrect="off" spellcheck="false" data-form-type="other">
+          </div>
+        </div>
+
+        <!-- Seção de Variações de Produto (Opcional & Dinâmica) -->
+        <div class="variations-section-container">
+          <div class="variations-section-header">
+            <div>
+              <div class="variations-section-title">
+                <i data-lucide="layers" style="width: 15px; height: 15px; color: var(--primary);"></i>
+                <span>Variações de Produto (Opcional)</span>
+              </div>
+              <p class="variations-section-sub">Adicione dimensões livres como Cor, Tamanho, Aroma, Modelo...</p>
+            </div>
+            <button type="button" class="btn-add-var-type" id="btnAddVariacao">
+              <i data-lucide="plus" style="width: 14px; height: 14px;"></i>
+              <span>Adicionar Variação</span>
+            </button>
+          </div>
+
+          <!-- Container dos tipos de variação criados -->
+          <div id="variacoesDefinicoesContainer" class="variations-list-container"></div>
+
+          <!-- Combinações geradas e estoque de cada combinação -->
+          <div id="variacoesCombinacoesWrapper" class="combinations-wrapper" style="display: none;">
+            <div class="combinations-header">
+              <span class="combinations-title">Combinações & Estoque</span>
+              <span class="combinations-counter" id="variacoesTotalCombinacoesTxt">0 combinações</span>
+            </div>
+            <div id="variacoesCombinacoesContainer" class="combinations-list"></div>
           </div>
         </div>
       </form>
@@ -646,15 +748,77 @@
           <span>Sincronizar Dados Agora (Nuvem ⇄ Local)</span>
         </button>
 
+        <!-- Base de Dados para Inteligência (Google Sheets) -->
+        <div style="border-top: 1px solid var(--border); padding-top: 12px; margin-top: 12px;">
+          <div style="font-size: 12.5px; font-weight: 700; color: var(--text); margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <i data-lucide="sheet" style="width: 15px; height: 15px; color: #10b981;"></i>
+              <span>Base de Inteligência (Google Sheets)</span>
+            </div>
+            <span id="badgeStatusGoogleSheets" class="badge-status-sheets ocioso">Ocioso</span>
+          </div>
+          <p style="font-size: 11.5px; color: var(--text-muted); margin-bottom: 8px;">
+            Exporta uma cópia estruturada e unidirecional para alimentar consultas de inteligência comercial e IA.
+          </p>
+          
+          <div class="card-info-sheets">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+              <span style="color: var(--text-muted);">Última Sincronização:</span>
+              <strong id="txtSheetsUltimaSync" style="color: var(--text);">Nunca</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+              <span style="color: var(--text-muted);">Status:</span>
+              <strong id="txtSheetsStatus" style="color: var(--text);">Ocioso</strong>
+            </div>
+            <div id="boxSheetsErro" style="display: none; color: var(--danger); font-size: 11px; margin-top: 4px; background: rgba(239, 68, 68, 0.1); padding: 6px 8px; border-radius: 6px; border: 1px solid rgba(239, 68, 68, 0.2); word-break: break-word;"></div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 8px;">
+            <button type="button" class="btn-main" id="btnSyncGoogleSheetsAgora" style="width: 100%; height: 36px; font-size: 12px; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.35); color: #10b981;">
+              <i data-lucide="refresh-cw" style="width: 14px; height: 14px;"></i>
+              <span id="btnSyncGoogleSheetsTxt">Sincronizar Google Sheets Agora</span>
+            </button>
+            <button type="button" class="btn-secondary-action" id="btnReconstruirGoogleSheets" style="height: 32px; font-size: 11px; color: var(--text-muted); border-style: dashed; justify-content: center;">
+              <i data-lucide="database-zap" style="width: 13px; height: 13px;"></i>
+              <span>Reconstruir Planilha Completa (Do Zero)</span>
+            </button>
+          </div>
+        </div>
+
         <!-- Controle de Versão, Cache e Atualização Remota -->
-        <div style="border-top: 1px solid var(--border); padding-top: 12px; margin-top: 8px;">
+        <div style="border-top: 1px solid var(--border); padding-top: 12px; margin-top: 12px;">
           <div style="font-size: 12.5px; font-weight: 700; color: var(--text); margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
             <i data-lucide="refresh-cw" style="width: 14px; height: 14px; color: var(--primary);"></i>
-            <span>Sistema & Atualização</span>
+            <span>Sistema & Atualização do Aplicativo</span>
           </div>
           <p style="font-size: 11.5px; color: var(--text-muted); margin-bottom: 10px;">
-            Força o navegador a buscar os arquivos novos no servidor sem alterar o histórico de vendas ou estoque.
+            Atualiza os arquivos do sistema (código, interface e correções) mantendo intactos suas vendas, estoque e Outbox local.
           </p>
+
+          <!-- Painel Diagnóstico de Versão e Service Worker -->
+          <div id="cardDiagnosticoVersao" style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; font-size: 11.5px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <span style="color: var(--text-muted);">Versão deste Terminal:</span>
+              <strong id="diagVersaoLocal" style="color: var(--primary); font-family: monospace; font-size: 12px;">v23.4</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <span style="color: var(--text-muted);">Versão no Servidor:</span>
+              <strong id="diagVersaoPublicada" style="color: var(--text); font-family: monospace; font-size: 12px;">Consultando...</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <span style="color: var(--text-muted);">Status da Versão:</span>
+              <span id="badgeStatusVersao" class="badge-status-sheets sucesso" style="font-size: 10.5px; padding: 2px 8px;">Atualizado</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <span style="color: var(--text-muted);">Service Worker:</span>
+              <span id="diagStatusSW" style="color: #10b981; font-weight: 600;">Ativo (Controlando)</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="color: var(--text-muted);">Último Pedido Global:</span>
+              <span id="diagReleaseId" style="color: var(--text-muted); font-family: monospace; font-size: 10.5px;">Nenhum recente</span>
+            </div>
+          </div>
+
           <div style="display: flex; flex-direction: column; gap: 8px;">
             <button type="button" class="btn-secondary-action" id="btnInstalarAppModal" style="display: none;">
               <i data-lucide="download" style="width: 15px; height: 15px; color: var(--primary);"></i>
@@ -662,11 +826,11 @@
             </button>
             <button type="button" class="btn-secondary-action" id="btnForcarUpdateLocal">
               <i data-lucide="rotate-ccw" style="width: 15px; height: 15px;"></i>
-              <span>Atualizar Este Terminal (Local)</span>
+              <span>Buscar versão mais recente neste terminal</span>
             </button>
             <button type="button" class="btn-broadcast-action" id="btnLancarUpdateGeral">
               <i data-lucide="radio" style="width: 15px; height: 15px;"></i>
-              <span>Atualizar Todos os Terminais (Remoto)</span>
+              <span>Solicitar atualização em todos os terminais</span>
             </button>
           </div>
         </div>
@@ -675,9 +839,15 @@
         <button class="pay-btn" id="btnExportarCSVSync" style="width: 100%;">
           <i data-lucide="file-spreadsheet"></i> Exportar Relatório Excel / IA (CSV)
         </button>
-        <button class="pay-btn" id="btnExportarBackup" style="width: 100%; background: transparent; border: 1px solid var(--border); color: var(--text-muted);">
-          <i data-lucide="download"></i> Baixar Backup Completo (JSON)
-        </button>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%;">
+          <button type="button" class="pay-btn" id="btnExportarBackup" style="background: transparent; border: 1px solid var(--border); color: var(--text-muted); font-size: 12px; height: 38px; padding: 0 8px; justify-content: center;">
+            <i data-lucide="download" style="width: 14px; height: 14px;"></i> <span>Exportar JSON</span>
+          </button>
+          <button type="button" class="pay-btn" id="btnRestaurarBackup" style="background: transparent; border: 1px solid var(--border); color: var(--text-muted); font-size: 12px; height: 38px; padding: 0 8px; justify-content: center;">
+            <i data-lucide="upload" style="width: 14px; height: 14px;"></i> <span>Restaurar JSON</span>
+          </button>
+          <input type="file" id="inputRestaurarBackup" accept=".json,application/json" style="display: none;">
+        </div>
       </div>
     </div>
   </div>
@@ -720,8 +890,9 @@
           <span id="catalogoDetalheBadgeEstoque" class="catalog-stock-pill">0 un</span>
         </div>
         <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 4px;">
-          <div>
+          <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
             <span class="category-badge" id="catalogoDetalheCategoria">Geral</span>
+            <span class="sku-badge" id="catalogoDetalheSku" style="font-size: 11px; font-family: monospace; background: rgba(255,255,255,0.06); padding: 2px 7px; border-radius: 4px; color: var(--text-muted); border: 1px solid rgba(255,255,255,0.1); display: none;">SKU: -</span>
           </div>
           <div style="text-align: right;">
             <div style="font-size: 11px; color: var(--text-muted); font-weight: 500;">Preço de Venda</div>
@@ -743,6 +914,185 @@
       </div>
     </div>
   </div>
+
+  <!-- Modal 9: Como Instalar no iPhone (iOS Safari) -->
+  <div class="modal-overlay center" id="modalInstalarIOS" style="z-index: 120;">
+    <div class="modal-container" style="max-width: 380px;">
+      <div class="modal-header">
+        <div class="modal-title" style="display: flex; align-items: center; gap: 8px;">
+          <i data-lucide="smartphone" style="width: 18px; height: 18px; color: var(--primary);"></i>
+          <span>Instalar no iPhone</span>
+        </div>
+        <button class="modal-close-btn"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body" style="padding: 18px 16px; gap: 16px;">
+        <p style="font-size: 13.5px; color: var(--text); line-height: 1.5; margin: 0;">
+          Para usar como aplicativo de tela cheia sem a barra do Safari:
+        </p>
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <div style="display: flex; align-items: flex-start; gap: 12px; background: var(--surface-card); padding: 12px; border-radius: 12px; border: 1px solid var(--border);">
+            <div style="background: rgba(245, 158, 11, 0.15); color: var(--primary); padding: 6px; border-radius: 8px; flex-shrink: 0;">
+              <i data-lucide="share" style="width: 18px; height: 18px;"></i>
+            </div>
+            <div style="font-size: 13px; color: var(--text); line-height: 1.4;">
+              <strong>1. Toque em Compartilhar</strong><br>
+              <span style="color: var(--text-muted); font-size: 12px;">No ícone da barra inferior do Safari no iPhone.</span>
+            </div>
+          </div>
+          <div style="display: flex; align-items: flex-start; gap: 12px; background: var(--surface-card); padding: 12px; border-radius: 12px; border: 1px solid var(--border);">
+            <div style="background: rgba(16, 185, 129, 0.15); color: var(--success); padding: 6px; border-radius: 8px; flex-shrink: 0;">
+              <i data-lucide="plus-square" style="width: 18px; height: 18px;"></i>
+            </div>
+            <div style="font-size: 13px; color: var(--text); line-height: 1.4;">
+              <strong>2. "Adicionar à Tela de Início"</strong><br>
+              <span style="color: var(--text-muted); font-size: 12px;">Role o menu de opções para cima e selecione esta opção.</span>
+            </div>
+          </div>
+          <div style="display: flex; align-items: flex-start; gap: 12px; background: var(--surface-card); padding: 12px; border-radius: 12px; border: 1px solid var(--border);">
+            <div style="background: rgba(56, 189, 248, 0.15); color: var(--accent); padding: 6px; border-radius: 8px; flex-shrink: 0;">
+              <i data-lucide="check" style="width: 18px; height: 18px;"></i>
+            </div>
+            <div style="font-size: 13px; color: var(--text); line-height: 1.4;">
+              <strong>3. Toque em "Adicionar"</strong><br>
+              <span style="color: var(--text-muted); font-size: 12px;">No canto superior direito da tela do iPhone.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-main" id="btnEntendiInstalarIOS" style="width: 100%; justify-content: center; height: 42px;">
+          Entendi
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 10: Recorte e Enquadramento de Foto (1:1) -->
+  <div class="modal-overlay center" id="modalRecorteFoto" style="z-index: 130;">
+    <div class="modal-container" style="max-width: 440px;">
+      <div class="modal-header">
+        <div class="modal-title" style="display: flex; align-items: center; gap: 8px;">
+          <i data-lucide="crop" style="width: 17px; height: 17px; color: var(--primary);"></i>
+          <span>Enquadrar Foto do Produto</span>
+        </div>
+        <button type="button" class="modal-close-btn" id="btnFecharModalRecorte"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body" style="padding: 14px; gap: 12px;">
+        <p style="font-size: 12px; color: var(--text-muted); margin: 0;">
+          Arraste a foto para posicionar. Use o slider de zoom ou faça gesto de pinça na tela.
+        </p>
+        
+        <!-- Viewport 1:1 com máscara -->
+        <div class="cropper-viewport-wrapper">
+          <div class="cropper-viewport" id="cropperViewport">
+            <img id="cropperImage" src="" alt="Para Enquadrar" draggable="false">
+            <div class="cropper-grid-overlay">
+              <div class="cropper-grid-line horizontal-1"></div>
+              <div class="cropper-grid-line horizontal-2"></div>
+              <div class="cropper-grid-line vertical-1"></div>
+              <div class="cropper-grid-line vertical-2"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Controles de Zoom e Prévia -->
+        <div class="cropper-controls-row">
+          <button type="button" class="btn-zoom-step" id="btnZoomOut" title="Diminuir Zoom">
+            <i data-lucide="minus" style="width: 16px; height: 16px;"></i>
+          </button>
+          <input type="range" id="cropperZoomSlider" min="1" max="3" step="0.02" value="1" class="cropper-slider">
+          <button type="button" class="btn-zoom-step" id="btnZoomIn" title="Aumentar Zoom">
+            <i data-lucide="plus" style="width: 16px; height: 16px;"></i>
+          </button>
+          
+          <!-- Mini Prévia do Card da Vitrine -->
+          <div class="cropper-preview-badge" title="Prévia aproximada no card da vitrine">
+            <canvas id="cropperCanvasPreview" width="46" height="46"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+        <button type="button" class="btn-cancel" id="btnCancelarRecorte">Cancelar</button>
+        <button type="button" class="btn-main" id="btnConfirmarRecorte" style="height: 42px;">
+          <i data-lucide="check"></i> Confirmar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 11: Seleção de Variação para Venda (PDV / Catálogo) -->
+  <div class="modal-overlay" id="modalSelecaoVariacao" style="z-index: 115;">
+    <div class="modal-container" style="max-width: 440px;">
+      <div class="modal-header">
+        <div class="modal-title" id="tituloSelecaoVariacao">Selecione a Variação</div>
+        <button type="button" class="modal-close-btn"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body" style="gap: 14px;">
+        <div class="sel-var-prod-header">
+          <div class="sel-var-thumb" id="selVarProdThumb">
+            <i data-lucide="package" style="width: 24px; height: 24px; opacity: 0.4;"></i>
+          </div>
+          <div class="sel-var-info">
+            <div class="sel-var-title" id="selVarProdNome">Nome do Produto</div>
+            <div class="sel-var-price" id="selVarProdPreco">R$ 0,00</div>
+          </div>
+        </div>
+
+        <!-- Container onde as dimensões de variação (Cor, Tamanho, etc) são renderizadas -->
+        <div id="selVarDimensoesContainer" class="sel-var-dimensions-list"></div>
+
+        <!-- Status da Combinação Selecionada -->
+        <div class="sel-var-combination-status" id="selVarStatusBox">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="font-size: 12px; color: var(--text-muted); font-weight: 600;">Combinação Selecionada:</div>
+            <span id="selVarSkuTag" style="font-size: 10.5px; font-family: monospace; color: var(--text-muted); background: rgba(255,255,255,0.06); padding: 1px 6px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); display: none;">SKU: —</span>
+          </div>
+          <div style="font-size: 15px; font-weight: 700; color: var(--text); margin-top: 2px;" id="selVarCombinacaoNome">—</div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+            <span id="selVarEstoqueBadge" class="stock-badge ok">Disponível</span>
+            <span id="selVarPrecoFinal" style="font-size: 17px; font-weight: 800; color: var(--primary);">R$ 0,00</span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-main" id="btnConfirmarSelecaoVariacao" style="width: 100%; height: 46px;">
+          <i data-lucide="shopping-cart"></i> Avançar para Venda
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Escolha de Origem de Foto para Variação/Combinação (Câmera ou Galeria) -->
+  <div class="modal-overlay center" id="modalOrigemFoto">
+    <div class="modal-container" style="max-width: 320px;">
+      <div class="modal-header">
+        <div class="modal-title" id="tituloOrigemFoto">Definir Imagem</div>
+        <button type="button" class="modal-close-btn" id="btnFecharModalOrigemFoto"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body" style="padding: 16px 20px;">
+        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 14px; text-align: center;" id="descOrigemFoto">
+          Como deseja carregar a imagem da variação?
+        </p>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <button type="button" class="btn-origem-foto" id="btnOrigemFotoCamera" style="display: flex; align-items: center; justify-content: center; gap: 10px; height: 46px; border-radius: 10px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #fff; font-size: 14px; font-weight: 600; cursor: pointer;">
+            <i data-lucide="camera" style="width: 18px; height: 18px; color: var(--primary);"></i>
+            <span>Tirar Foto com a Câmera</span>
+          </button>
+          <button type="button" class="btn-origem-foto" id="btnOrigemFotoGaleria" style="display: flex; align-items: center; justify-content: center; gap: 10px; height: 46px; border-radius: 10px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #fff; font-size: 14px; font-weight: 600; cursor: pointer;">
+            <i data-lucide="image" style="width: 18px; height: 18px; color: var(--primary);"></i>
+            <span>Escolher da Galeria / Arquivos</span>
+          </button>
+        </div>
+      </div>
+      <div class="modal-footer" style="padding: 10px 20px 16px;">
+        <button type="button" class="btn-secondary" id="btnCancelarOrigemFoto" style="width: 100%; height: 40px; font-size: 13px;">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Inputs ocultos para fotos de variação -->
+  <input type="file" id="inputVarPhotoCamera" accept="image/*" capture="environment" style="display: none;">
+  <input type="file" id="inputVarPhotoGallery" accept="image/*" style="display: none;">
 
   <!-- Toast Notification -->
   <div class="toast" id="appToast">

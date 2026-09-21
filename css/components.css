@@ -4,7 +4,10 @@
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.07);
-  padding: 14px 18px;
+  padding-top: calc(12px + var(--safe-top));
+  padding-bottom: 12px;
+  padding-left: calc(16px + var(--safe-left));
+  padding-right: calc(16px + var(--safe-right));
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -125,6 +128,8 @@
   width: 100%;
   height: calc(var(--bottom-nav-height) + var(--safe-bottom));
   padding-bottom: var(--safe-bottom);
+  padding-left: var(--safe-left);
+  padding-right: var(--safe-right);
   background: var(--surface);
   border-top: 1px solid var(--border);
   display: flex;
@@ -169,7 +174,7 @@
 .fab {
   position: fixed;
   bottom: calc(var(--bottom-nav-height) + var(--safe-bottom) + 16px);
-  right: 16px;
+  right: calc(16px + var(--safe-right));
   width: 56px;
   height: 56px;
   background: linear-gradient(135deg, #f59e0b, #d97706);
@@ -206,7 +211,7 @@
   background: transparent;
   border: none;
   color: var(--text);
-  font-size: 14px;
+  font-size: 16px; /* Previne auto-zoom no iOS Safari */
   outline: none;
 }
 

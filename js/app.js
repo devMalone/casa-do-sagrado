@@ -2,11 +2,13 @@
 
 import { state, carregarDadosLocais, salvarLocal } from './state.js';
 import { abrirModal, fecharModalAtual, mostrarToast, refreshIcons, aplicarMascaraMoeda, forcarAtualizacaoLocal } from './utils.js';
-import { iniciarSupabaseSeConfigurado, alternarConexaoSupabase, exportarBackupJSON, exportarRelatorioCSV, setAppRenderCallback, lancarAtualizacaoGeral, sincronizarTudoSilenciosamente, forcarSincronizacaoManual } from './supabase.js';
+import { iniciarSupabaseSeConfigurado, alternarConexaoSupabase, exportarBackupJSON, restaurarBackupJSON, exportarRelatorioCSV, setAppRenderCallback, solicitarAtualizacaoGlobal, lancarAtualizacaoGeral, sincronizarTudoSilenciosamente, forcarSincronizacaoManual, garantirConexaoRealtime, carregarStatusGoogleSheets, sincronizarGoogleSheets, atualizarUIDiagnosticoVersao, carregarStatusVersaoRemota } from './supabase.js';
+import { reconciliarComServidor, logSync } from './sync_engine.js';
+import { APP_VERSION, BUILD_ID, DB_SCHEMA_VERSION, CACHE_NAME } from './version.js';
 import { renderizarCategoriasUI, adicionarCategoria, abrirModalCategorias, setOnCategoriaAlteradaCallback } from './categorias.js';
 import { renderizarEstoque, filtrarProdutos, abrirModalProduto, salvarProduto, setOnQuickSellCallback, excluirProdutoAtual, setOnProdutoAlteradoCallback, configurarEventosFotoProduto } from './estoque.js';
 import { renderizarCatalogo, configurarEventosCatalogo, setOnCatalogQuickSellCallback } from './catalogo.js';
-import { iniciarVendaRapida, ajustarQtdVenda, selecionarMetodoPgto, confirmarVendaFinal, renderizarHistoricoVendas, setOnVendaRealizadaCallback, limparTodoHistoricoVendas } from './vendas.js';
+import { iniciarVendaRapida, ajustarQtdVenda, selecionarMetodoPgto, confirmarVendaFinal, renderizarHistoricoVendas, setOnVendaRealizadaCallback, limparTodoHistoricoVendas, configurarEventosSelecaoVariacao } from './vendas.js';
 import { renderizarDashboard, abrirModalConfigReserva, salvarConfigReserva, abrirModalConfigEquilibrio, adicionarItemCustoFixo, atualizarDiasUteisMes } from './dashboard.js';
 import { recalcularMarkup, copiarPrecoParaNovoProduto } from './markup.js';
 import { renderizarCurvaABC, alternarSubAbaFerramentas } from './curva_abc.js';
@@ -35,20 +37,86 @@ document.addEventListener('DOMContentLoaded', () => {
   iniciarSupabaseSeConfigurado();
   renderizarTudo();
 
-  // Sincronização automática ao retornar ao app, reconectar rede ou periódico (fallback mobile)
+  // Sincronização automática e reconexão inteligente ao retornar ao app ou reconectar rede (iOS + Android)
+  let ultimoTimestampFundo = Date.now();
+  let retormandoAtividadeTimeout = null;
+
+  function executarReconciliacaoAoRetomar(motivo = 'foreground') {
+    if (retormandoAtividadeTimeout) clearTimeout(retormandoAtividadeTimeout);
+    retormandoAtividadeTimeout = setTimeout(async () => {
+      const tempoSuspenso = Date.now() - ultimoTimestampFundo;
+      logSync('RECONNECT', `Retomando atividade (${motivo}, suspenso por ~${Math.round(tempoSuspenso / 1000)}s). Reconciliando...`);
+      // No iPhone/WebKit, se ficou suspenso por mais de 5s, o socket provavelmente foi congelado
+      const deveForcarReconexao = tempoSuspenso > 5000;
+      garantirConexaoRealtime(deveForcarReconexao);
+      await reconciliarComServidor();
+    }, 250);
+  }
+
+  // 1. Visibilidade (Troca de aba / retorno ao app)
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
-      sincronizarTudoSilenciosamente();
+      executarReconciliacaoAoRetomar('visibilitychange-visible');
+    } else {
+      ultimoTimestampFundo = Date.now();
     }
   });
-  window.addEventListener('online', () => {
-    sincronizarTudoSilenciosamente();
-  });
-  setInterval(sincronizarTudoSilenciosamente, 25000);
 
-  // Registro do Service Worker
+  // 2. PageShow (Crucial para iOS Safari / WebKit bfcache e app switcher)
+  window.addEventListener('pageshow', (e) => {
+    executarReconciliacaoAoRetomar(e.persisted ? 'pageshow-persisted' : 'pageshow');
+  });
+
+  // 3. Focus (Desbloqueio de tela / foco na janela)
+  window.addEventListener('focus', () => {
+    executarReconciliacaoAoRetomar('window-focus');
+  });
+
+  // 4. Online (Restabelecimento de conexão de rede Wi-Fi / dados móveis)
+  window.addEventListener('online', () => {
+    state.isOnline = true;
+    executarReconciliacaoAoRetomar('online');
+  });
+
+  window.addEventListener('offline', () => {
+    state.isOnline = false;
+    logSync('QUEUE', 'Dispositivo offline. Mutações permanecerão salvas na Outbox.');
+  });
+
+  // 5. Heartbeat periódico em primeiro plano
+  setInterval(() => {
+    if (document.visibilityState === 'visible' && navigator.onLine) {
+      garantirConexaoRealtime(false);
+      sincronizarTudoSilenciosamente();
+    }
+  }, 25000);
+
+  // Registro do Service Worker com checagem ativa no iOS/Android e bypass de cache HTTP
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js').catch(() => {});
+    navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).then((reg) => {
+      reg.update().catch(() => {});
+    }).catch((err) => {
+      console.warn('[SW] Falha ao registrar Service Worker:', err);
+    });
+
+    let reloading = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (reloading) return;
+      reloading = true;
+      window.location.reload();
+    });
+  }
+
+  // Detecção de iOS vs Android para Instalação PWA
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  const isStandalone = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+
+  if (isIOS && !isStandalone) {
+    const btnInstall = document.getElementById('btnInstalarApp');
+    const btnInstallModal = document.getElementById('btnInstalarAppModal');
+    if (btnInstall) btnInstall.style.display = 'flex';
+    if (btnInstallModal) btnInstallModal.style.display = 'flex';
+    refreshIcons();
   }
 
   // Captura do evento de Instalação do PWA
@@ -186,10 +254,29 @@ function vincularEventosGlobais() {
   document.getElementById('btnFecharModalOperador')?.addEventListener('click', fecharModalAtual);
 
   // Nuvem / Supabase & Atualizações
-  document.getElementById('btnAbrirSync')?.addEventListener('click', () => abrirModal('modalSync'));
+  document.getElementById('btnAbrirSync')?.addEventListener('click', () => {
+    abrirModal('modalSync');
+    carregarStatusGoogleSheets();
+    atualizarUIDiagnosticoVersao();
+    carregarStatusVersaoRemota();
+  });
   document.getElementById('btnSalvarSupabase')?.addEventListener('click', alternarConexaoSupabase);
   document.getElementById('btnForcarSyncManual')?.addEventListener('click', forcarSincronizacaoManual);
+  document.getElementById('btnSyncGoogleSheetsAgora')?.addEventListener('click', () => sincronizarGoogleSheets('incremental'));
+  document.getElementById('btnReconstruirGoogleSheets')?.addEventListener('click', () => sincronizarGoogleSheets('full_rebuild'));
   document.getElementById('btnExportarBackup')?.addEventListener('click', exportarBackupJSON);
+  
+  // Restauração de Backup JSON com input de arquivo
+  const inputRestaurar = document.getElementById('inputRestaurarBackup');
+  document.getElementById('btnRestaurarBackup')?.addEventListener('click', () => {
+    inputRestaurar?.click();
+  });
+  inputRestaurar?.addEventListener('change', (e) => {
+    const file = e.target.files?.[0];
+    if (file) restaurarBackupJSON(file);
+    e.target.value = '';
+  });
+
   document.getElementById('btnExportarCSVSync')?.addEventListener('click', exportarRelatorioCSV);
   document.getElementById('btnExportarVendasCSV')?.addEventListener('click', exportarRelatorioCSV);
   document.getElementById('btnForcarUpdateLocal')?.addEventListener('click', () => forcarAtualizacaoLocal(true));
@@ -197,6 +284,10 @@ function vincularEventosGlobais() {
 
   // Instalação PWA Direta (Header e Modal)
   const dispararInstalacao = async () => {
+    if (isIOS && !isStandalone) {
+      abrirModal('modalInstalarIOS');
+      return;
+    }
     if (deferredInstallPrompt) {
       deferredInstallPrompt.prompt();
       const { outcome } = await deferredInstallPrompt.userChoice;
@@ -208,12 +299,13 @@ function vincularEventosGlobais() {
       }
       deferredInstallPrompt = null;
     } else {
-      mostrarToast('Para instalar, use o menu do seu navegador (3 pontinhos > Instalar aplicativo).');
+      mostrarToast('Para instalar, use o menu do seu navegador (Compartilhar > Adicionar à Tela de Início).');
     }
   };
 
   document.getElementById('btnInstalarApp')?.addEventListener('click', dispararInstalacao);
   document.getElementById('btnInstalarAppModal')?.addEventListener('click', dispararInstalacao);
+  document.getElementById('btnEntendiInstalarIOS')?.addEventListener('click', fecharModalAtual);
 
   // Categorias
   document.getElementById('btnGerenciarCategorias')?.addEventListener('click', abrirModalCategorias);
@@ -246,6 +338,7 @@ function vincularEventosGlobais() {
   document.getElementById('btnVendaQtdMais')?.addEventListener('click', () => ajustarQtdVenda(1));
   document.getElementById('btnConfirmarVenda')?.addEventListener('click', confirmarVendaFinal);
   document.getElementById('btnLimparVendas')?.addEventListener('click', limparTodoHistoricoVendas);
+  configurarEventosSelecaoVariacao();
   document.querySelectorAll('.payment-methods .pay-btn').forEach(btn => {
     btn.addEventListener('click', function() {
       selecionarMetodoPgto(this.getAttribute('data-method'), this);

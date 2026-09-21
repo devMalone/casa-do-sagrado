@@ -1,10 +1,10 @@
 ﻿// js/version.js — Fonte Única da Verdade para Versionamento do Frontend
-// Versão Atual: v24.2 (Build: 20260921-074900)
+// Versão Atual: v24.3 (Build: 20260921-075600)
 
-export const APP_VERSION = '24.2';
-export const BUILD_ID = '20260921-074900';
+export const APP_VERSION = '24.3';
+export const BUILD_ID = '20260921-075600';
 export const DB_SCHEMA_VERSION = 24;
-export const CACHE_NAME = 'casa-sagrado-v24.2';
+export const CACHE_NAME = 'casa-sagrado-v24.3';
 
 /**
  * Retorna as informações completas de versão e release da aplicação local instalada.
@@ -99,4 +99,5 @@ export function salvarUltimoRequestIdProcessado(requestId) {
     localStorage.setItem('casa_last_processed_update_request_id', requestId);
   }
 }
+
 

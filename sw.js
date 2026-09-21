@@ -1,4 +1,4 @@
-﻿const APP_VERSION = '24.2';
+﻿const APP_VERSION = '24.3';
 const CACHE_NAME = `casa-sagrado-v${APP_VERSION}`;
 const ASSETS_TO_CACHE = [
   './',
@@ -131,4 +131,5 @@ self.addEventListener('fetch', (event) => {
     })
   );
 });
+
 

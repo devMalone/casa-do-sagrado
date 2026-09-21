@@ -21,6 +21,7 @@ export const state = {
   buscaFiltro: '',
   modalStack: [],
   vendaEmAndamento: null,
+  carrinho: [], // Sacola de compras multi-item (Local-First)
   metodoPgtoSelecionado: 'Pix',
   supabase: null,
   isOnline: navigator.onLine,
@@ -107,10 +108,16 @@ export async function carregarDadosLocais() {
     try {
       const parsedSales = JSON.parse(sales);
       state.vendas = Array.isArray(parsedSales) ? parsedSales : [];
-      // Higieniza IDs legados e descarta vendas estornadas do histórico ativo
+      // Higieniza IDs legados, garante pedido_id e descarta vendas estornadas do histórico ativo
       state.vendas = state.vendas.filter(v => {
         if (!v.id || !UUID_REGEX.test(v.id)) {
           v.id = crypto.randomUUID();
+        }
+        if (!v.pedido_id) {
+          v.pedido_id = v.id;
+        }
+        if (!v.numero_pedido) {
+          v.numero_pedido = '#CS-' + (v.pedido_id ? v.pedido_id.substring(0, 6).toUpperCase() : '0000');
         }
         return v.estornada !== true;
       });
@@ -121,7 +128,20 @@ export async function carregarDadosLocais() {
     state.vendas = [];
   }
 
-  // 6. Categorias
+  // 6. Carrinho / Sacola de Compras Local-First
+  const cartSalvo = localStorage.getItem('casa_carrinho');
+  if (cartSalvo) {
+    try {
+      const parsedCart = JSON.parse(cartSalvo);
+      state.carrinho = Array.isArray(parsedCart) ? parsedCart : [];
+    } catch (e) {
+      state.carrinho = [];
+    }
+  } else {
+    state.carrinho = [];
+  }
+
+  // 7. Categorias
   const cats = localStorage.getItem('casa_categorias');
   if (cats) {
     try {
@@ -132,7 +152,7 @@ export async function carregarDadosLocais() {
     } catch (e) {}
   }
 
-  // 7. Configurações
+  // 8. Configurações
   const cfg = localStorage.getItem('casa_config');
   if (cfg) {
     try {
@@ -157,6 +177,7 @@ export function salvarLocal() {
   try {
     localStorage.setItem('casa_produtos', JSON.stringify(state.produtos));
     localStorage.setItem('casa_vendas', JSON.stringify(state.vendas));
+    localStorage.setItem('casa_carrinho', JSON.stringify(state.carrinho));
     localStorage.setItem('casa_categorias', JSON.stringify(state.categorias));
     localStorage.setItem('casa_config', JSON.stringify(state.config));
     localStorage.setItem('casa_sync_queue', JSON.stringify(state.syncQueue));
@@ -252,4 +273,152 @@ export function adicionarTombstone(id) {
 export function ehTombstone(id) {
   if (!id) return false;
   return state.tombstones.has(id);
+}
+
+// ==============================================================================
+// GERENCIAMENTO DA SACOLA / CARRINHO DE COMPRAS MULTI-ITEM (LOCAL-FIRST)
+// ==============================================================================
+
+/**
+ * Adiciona um produto ou combinação de variação à sacola.
+ * Se o mesmo item já estiver presente, consolida a quantidade até o saldo disponível.
+ */
+export function adicionarAoCarrinho(produto, variante = null, quantidade = 1) {
+  if (!produto) return { sucesso: false, mensagem: 'Produto inválido.' };
+
+  const estoqueMax = variante ? (variante.estoque_atual || 0) : (produto.estoque_atual || 0);
+  if (estoqueMax <= 0) {
+    return { sucesso: false, mensagem: 'Item esgotado no estoque.' };
+  }
+
+  const varId = variante ? variante.id : null;
+  const itemExistente = state.carrinho.find(it => it.produto_id === produto.id && it.variante_id === varId);
+
+  if (itemExistente) {
+    const novaQtd = itemExistente.quantidade + quantidade;
+    if (novaQtd > estoqueMax) {
+      itemExistente.quantidade = estoqueMax;
+      salvarLocal();
+      return {
+        sucesso: true,
+        atingiuLimite: true,
+        mensagem: `Quantidade ajustada ao limite de estoque disponível (${estoqueMax} un).`
+      };
+    }
+    itemExistente.quantidade = novaQtd;
+  } else {
+    const precoUnit = Number(variante?.preco_venda !== undefined && variante?.preco_venda !== null ? variante.preco_venda : produto.preco_venda) || 0;
+    const custoUnit = Number(variante?.preco_custo !== undefined && variante?.preco_custo !== null ? variante.preco_custo : produto.preco_custo) || 0;
+    const fotoFinal = (variante && variante.imagem) ? variante.imagem : (produto.imagem || null);
+    const skuFinal = (variante && variante.sku) ? variante.sku : (produto.sku || null);
+
+    state.carrinho.push({
+      item_id: crypto.randomUUID(),
+      produto_id: produto.id,
+      nome: produto.nome,
+      nome_produto: produto.nome,
+      categoria: produto.categoria || 'Geral',
+      subcategoria: produto.subcategoria || null,
+      variante_id: varId,
+      variacao_nome: variante ? variante.nome_combinacao : null,
+      variacao_atributos: variante ? (variante.combinacao || null) : null,
+      sku: skuFinal,
+      preco_unitario: precoUnit,
+      preco_custo: custoUnit,
+      quantidade: Math.min(quantidade, estoqueMax),
+      imagem: fotoFinal,
+      estoque_disponivel: estoqueMax
+    });
+  }
+
+  salvarLocal();
+  return { sucesso: true, mensagem: 'Item adicionado à sacola!' };
+}
+
+export function removerDoCarrinho(prodOrItemId, varianteId = null) {
+  state.carrinho = state.carrinho.filter(it => {
+    if (it.item_id === prodOrItemId) return false;
+    if (it.produto_id === prodOrItemId && (it.variante_id || null) === (varianteId || null)) return false;
+    return true;
+  });
+  salvarLocal();
+}
+
+export function ajustarQtdCarrinho(prodOrItemId, varianteOrDelta, deltaOpt = null) {
+  let item = null;
+  let delta = 0;
+
+  if (typeof varianteOrDelta === 'number') {
+    delta = varianteOrDelta;
+    item = state.carrinho.find(it => it.item_id === prodOrItemId);
+  } else {
+    const varianteId = varianteOrDelta || null;
+    delta = typeof deltaOpt === 'number' ? deltaOpt : 0;
+    item = state.carrinho.find(it => it.produto_id === prodOrItemId && (it.variante_id || null) === (varianteId || null));
+  }
+
+  if (!item) return;
+
+  const prod = state.produtos.find(p => p.id === item.produto_id);
+  let estoqueMax = item.estoque_disponivel || 999;
+  if (prod) {
+    if (item.variante_id && prod.variantes) {
+      const vObj = prod.variantes.find(v => v.id === item.variante_id);
+      if (vObj) estoqueMax = vObj.estoque_atual || 0;
+    } else {
+      estoqueMax = prod.estoque_atual || 0;
+    }
+    item.estoque_disponivel = estoqueMax;
+  }
+
+  const novaQtd = item.quantidade + delta;
+  if (novaQtd <= 0) {
+    removerDoCarrinho(item.item_id);
+    return;
+  }
+  if (novaQtd > estoqueMax) {
+    item.quantidade = estoqueMax;
+    salvarLocal();
+    return;
+  }
+  item.quantidade = novaQtd;
+  salvarLocal();
+}
+
+export function limparCarrinho() {
+  state.carrinho = [];
+  salvarLocal();
+}
+
+export function obterTotaisCarrinho() {
+  let subtotal = 0;
+  let custoTotal = 0;
+  let totalUnidades = 0;
+
+  state.carrinho.forEach(item => {
+    const qtd = item.quantidade || 1;
+    const preco = item.preco_unitario || 0;
+    const custo = item.preco_custo || 0;
+    subtotal += qtd * preco;
+    custoTotal += qtd * custo;
+    totalUnidades += qtd;
+  });
+
+  const total = subtotal; // Pronto para descontos futuros
+  const lucroBruto = total - custoTotal;
+  const pctReserva = (state.config.percentualReserva || 30) / 100;
+  const reservaTotal = lucroBruto > 0 ? (lucroBruto * pctReserva) : 0;
+
+  return {
+    totalItens: state.carrinho.length,
+    totalItensLinhas: state.carrinho.length,
+    totalUnidades,
+    subtotal,
+    desconto: 0,
+    total,
+    custoTotal,
+    lucroBruto,
+    reservaTotal,
+    reservaCalculada: reservaTotal
+  };
 }

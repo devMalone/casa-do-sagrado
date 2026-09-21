@@ -357,78 +357,124 @@ function formatarDataHora(isoString: string | null) {
   }
 }
 
-function transformarVendaParaLinhas(venda: any) {
-  const { data_hora, data, hora } = formatarDataHora(venda.created_at);
-  const status = venda.estornada ? "ESTORNADA" : "CONCLUIDA";
+function transformarVendasAgrupadasParaLinhas(vendas: any[]) {
+  const pedidosMap = new Map<string, any>();
+  const linhasItens: any[][] = [];
+  const linhasMov: any[][] = [];
+  const linhasReserva: any[][] = [];
 
-  const linhaVenda = [
-    venda.id,
-    data_hora,
-    data,
-    hora,
-    venda.operador || "Operador",
-    Number(venda.valor_total || 0), // subtotal
-    0, // desconto (campo preparado para o futuro)
-    Number(venda.valor_total || 0), // total
-    venda.metodo_pagamento || "Dinheiro",
-    Number(venda.custo_total || 0),
-    Number(venda.lucro_bruto || 0),
-    Number(venda.valor_reserva_30 || 0),
-    status,
-    venda.created_at,
-    venda.updated_at || venda.created_at,
-  ];
+  for (const v of vendas) {
+    const saleId = v.pedido_id || v.id;
+    const { data_hora, data, hora } = formatarDataHora(v.created_at);
+    const itemSubtotal = Number(v.valor_total || 0);
+    const itemCusto = Number(v.custo_total || 0);
+    const itemLucro = Number(v.lucro_bruto || 0);
+    const itemReserva = Number(v.valor_reserva_30 || 0);
 
-  const linhaItem = [
-    `${venda.id}_item_1`,
-    venda.id,
-    venda.produto_id || "",
-    venda.variante_id || "",
-    venda.sku || "",
-    venda.nome_produto || "Produto",
-    venda.categoria || "Geral",
-    venda.subcategoria || "",
-    venda.variacao_nome || "",
-    venda.variacao_atributos ? JSON.stringify(venda.variacao_atributos) : "",
-    Number(venda.quantidade || 1),
-    Number(venda.valor_unitario || 0),
-    Number(venda.quantidade ? (venda.custo_total / venda.quantidade).toFixed(2) : 0),
-    Number(venda.valor_total || 0),
-    Number(venda.custo_total || 0),
-    Number(venda.lucro_bruto || 0),
-    venda.created_at,
-  ];
+    if (!pedidosMap.has(saleId)) {
+      pedidosMap.set(saleId, {
+        id: saleId,
+        data_hora,
+        data,
+        hora,
+        operador: v.operador || "Operador",
+        subtotal: 0,
+        desconto: 0,
+        total: 0,
+        metodo_pagamento: v.metodo_pagamento || "Dinheiro",
+        custo_total: 0,
+        lucro_bruto: 0,
+        valor_reserva_30: 0,
+        estornada: false,
+        created_at: v.created_at,
+        updated_at: v.updated_at || v.created_at
+      });
+    }
 
-  const linhaMovimentacao = [
-    `mov_venda_${venda.id}`,
-    data_hora,
-    venda.produto_id || "",
-    venda.variante_id || "",
-    venda.nome_produto || "",
-    venda.variacao_nome || "",
-    venda.estornada ? "ESTORNO" : "VENDA",
-    venda.estornada ? Number(venda.quantidade || 1) : -Number(venda.quantidade || 1),
-    venda.estornada ? `Estorno por ${venda.estorno_operador || "Operador"}` : "Venda no PDV",
-    venda.id,
-    Number(venda.quantidade ? (venda.custo_total / venda.quantidade).toFixed(2) : 0),
-    venda.created_at,
-  ];
+    const ped = pedidosMap.get(saleId);
+    ped.subtotal += itemSubtotal;
+    ped.total += itemSubtotal;
+    ped.custo_total += itemCusto;
+    ped.lucro_bruto += itemLucro;
+    ped.valor_reserva_30 += itemReserva;
+    if (v.estornada) ped.estornada = true;
 
-  let linhaReserva: any[] | null = null;
-  if (Number(venda.valor_reserva_30) > 0) {
-    linhaReserva = [
-      `res_${venda.id}`,
-      data_hora,
-      venda.id,
-      venda.estornada ? "ESTORNO_VENDA" : "ENTRADA_VENDA",
-      venda.estornada ? -Number(venda.valor_reserva_30) : Number(venda.valor_reserva_30),
-      `Reserva 30% da venda ${venda.id.substring(0, 8)}`,
-      venda.operador || "Operador",
-      venda.created_at,
+    // Item row (1 linha por item/variante)
+    const linhaItem = [
+      v.id,
+      saleId,
+      v.produto_id || "",
+      v.variante_id || "",
+      v.sku || "",
+      v.nome_produto || "Produto",
+      v.categoria || "Geral",
+      v.subcategoria || "",
+      v.variacao_nome || "",
+      v.variacao_atributos ? JSON.stringify(v.variacao_atributos) : "",
+      Number(v.quantidade || 1),
+      Number(v.valor_unitario || 0),
+      Number(v.quantidade ? (v.custo_total / v.quantidade).toFixed(2) : 0),
+      Number(itemSubtotal.toFixed(2)),
+      Number(itemCusto.toFixed(2)),
+      Number(itemLucro.toFixed(2)),
+      v.created_at
     ];
+    linhasItens.push(linhaItem);
+
+    // Movimentação de estoque por item
+    const linhaMov = [
+      `mov_venda_${v.id}`,
+      data_hora,
+      v.produto_id || "",
+      v.variante_id || "",
+      v.nome_produto || "",
+      v.variacao_nome || "",
+      v.estornada ? "ESTORNO" : "VENDA",
+      v.estornada ? Number(v.quantidade || 1) : -Number(v.quantidade || 1),
+      v.estornada ? `Estorno por ${v.estorno_operador || "Operador"}` : "Venda no PDV",
+      saleId,
+      Number(v.quantidade ? (v.custo_total / v.quantidade).toFixed(2) : 0),
+      v.created_at
+    ];
+    linhasMov.push(linhaMov);
   }
 
-  return { linhaVenda, linhaItem, linhaMovimentacao, linhaReserva };
+  const linhasVendas: any[][] = [];
+  for (const ped of pedidosMap.values()) {
+    const status = ped.estornada ? "ESTORNADA" : "CONCLUIDA";
+    linhasVendas.push([
+      ped.id,
+      ped.data_hora,
+      ped.data,
+      ped.hora,
+      ped.operador,
+      Number(ped.subtotal.toFixed(2)),
+      0, // desconto
+      Number(ped.total.toFixed(2)),
+      ped.metodo_pagamento,
+      Number(ped.custo_total.toFixed(2)),
+      Number(ped.lucro_bruto.toFixed(2)),
+      Number(ped.valor_reserva_30.toFixed(2)),
+      status,
+      ped.created_at,
+      ped.updated_at
+    ]);
+
+    if (ped.valor_reserva_30 > 0) {
+      linhasReserva.push([
+        `res_${ped.id}`,
+        ped.data_hora,
+        ped.id,
+        ped.estornada ? "ESTORNO_VENDA" : "ENTRADA_VENDA",
+        ped.estornada ? -Number(ped.valor_reserva_30.toFixed(2)) : Number(ped.valor_reserva_30.toFixed(2)),
+        `Reserva 30% do pedido ${ped.id.substring(0, 8)}`,
+        ped.operador,
+        ped.created_at
+      ]);
+    }
+  }
+
+  return { linhasVendas, linhasItens, linhasMov, linhasReserva };
 }
 
 function transformarProdutosEVariantes(produtos: any[]) {
@@ -641,18 +687,12 @@ serve(async (req) => {
       // Limpa todas as 8 abas
       await limparAbas(accessToken, GOOGLE_SPREADSHEET_ID, REQUIRED_SHEETS);
 
-      const todasLinhasVendas: any[][] = [];
-      const todasLinhasItens: any[][] = [];
-      const todasLinhasMov: any[][] = [];
-      const todasLinhasReserva: any[][] = [];
-
-      for (const v of vendas || []) {
-        const { linhaVenda, linhaItem, linhaMovimentacao, linhaReserva } = transformarVendaParaLinhas(v);
-        todasLinhasVendas.push(linhaVenda);
-        todasLinhasItens.push(linhaItem);
-        todasLinhasMov.push(linhaMovimentacao);
-        if (linhaReserva) todasLinhasReserva.push(linhaReserva);
-      }
+      const {
+        linhasVendas: todasLinhasVendas,
+        linhasItens: todasLinhasItens,
+        linhasMov: todasLinhasMov,
+        linhasReserva: todasLinhasReserva
+      } = transformarVendasAgrupadasParaLinhas(vendas || []);
 
       totalVendasEnviadas = todasLinhasVendas.length;
       totalItensEnviados = todasLinhasItens.length;
@@ -707,20 +747,15 @@ serve(async (req) => {
       const vendasNaPlanilha = await lerValoresAba(accessToken, GOOGLE_SPREADSHEET_ID, "Vendas!A:A");
       const idsExistentes = new Set(vendasNaPlanilha.slice(1).map((r) => r[0]));
 
-      const novasLinhasVendas: any[][] = [];
-      const novasLinhasItens: any[][] = [];
-      const novasLinhasMov: any[][] = [];
-      const novasLinhasReserva: any[][] = [];
+      // Filtra vendas cujos itens ainda não foram enviados
+      const vendasNaoEnviadas = (vendas || []).filter(v => !idsExistentes.has(v.pedido_id || v.id) && !idsExistentes.has(v.id));
 
-      for (const v of vendas || []) {
-        if (!idsExistentes.has(v.id)) {
-          const { linhaVenda, linhaItem, linhaMovimentacao, linhaReserva } = transformarVendaParaLinhas(v);
-          novasLinhasVendas.push(linhaVenda);
-          novasLinhasItens.push(linhaItem);
-          novasLinhasMov.push(linhaMovimentacao);
-          if (linhaReserva) novasLinhasReserva.push(linhaReserva);
-        }
-      }
+      const {
+        linhasVendas: novasLinhasVendas,
+        linhasItens: novasLinhasItens,
+        linhasMov: novasLinhasMov,
+        linhasReserva: novasLinhasReserva
+      } = transformarVendasAgrupadasParaLinhas(vendasNaoEnviadas);
 
       totalVendasEnviadas = novasLinhasVendas.length;
       totalItensEnviados = novasLinhasItens.length;

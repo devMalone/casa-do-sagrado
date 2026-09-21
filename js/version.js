@@ -1,10 +1,10 @@
 // js/version.js — Fonte Única da Verdade para Versionamento do Frontend
-// Versão Atual: v23.4 (Build: 20260921-001500)
+// Versão Atual: v24.1 (Build: 20260921-073000)
 
-export const APP_VERSION = '23.4';
-export const BUILD_ID = '20260921-001500';
-export const DB_SCHEMA_VERSION = 23;
-export const CACHE_NAME = 'casa-sagrado-v23.4';
+export const APP_VERSION = '24.1';
+export const BUILD_ID = '20260921-073000';
+export const DB_SCHEMA_VERSION = 24;
+export const CACHE_NAME = 'casa-sagrado-v24.1';
 
 /**
  * Retorna as informações completas de versão e release da aplicação local instalada.

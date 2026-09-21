@@ -274,14 +274,21 @@ function sincronizarVendaRealtime(payload) {
     if (!novaVenda || !novaVenda.id) return;
     if (novaVenda.estornada === true) return; // Não exibe vendas já estornadas
 
+    novaVenda.pedido_id = novaVenda.pedido_id || novaVenda.id;
+    novaVenda.numero_pedido = novaVenda.numero_pedido || ('#CS-' + (novaVenda.pedido_id ? novaVenda.pedido_id.substring(0, 6).toUpperCase() : '0000'));
+
     if (!state.vendas.some(v => v.id === novaVenda.id)) {
       state.vendas.unshift(novaVenda);
+      state.vendas.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
       salvarLocal();
       if (appRenderCallback) appRenderCallback();
     }
   } else if (payload.eventType === 'UPDATE') {
     const vendaAtualizada = payload.new;
     if (!vendaAtualizada || !vendaAtualizada.id) return;
+
+    vendaAtualizada.pedido_id = vendaAtualizada.pedido_id || vendaAtualizada.id;
+    vendaAtualizada.numero_pedido = vendaAtualizada.numero_pedido || ('#CS-' + (vendaAtualizada.pedido_id ? vendaAtualizada.pedido_id.substring(0, 6).toUpperCase() : '0000'));
 
     // Se a venda foi estornada remotamente, expurga do histórico ativo
     if (vendaAtualizada.estornada === true) {

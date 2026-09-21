@@ -110,7 +110,10 @@ CREATE TABLE IF NOT EXISTS public.casa_vendas (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Garantir colunas de controle, estorno, variações e SKU se tabela já existia
+-- Garantir colunas de controle, estorno, variações, SKU, categoria e pedido_id multi-item se tabela já existia
+ALTER TABLE public.casa_vendas ADD COLUMN IF NOT EXISTS pedido_id UUID;
+ALTER TABLE public.casa_vendas ADD COLUMN IF NOT EXISTS numero_pedido TEXT;
+ALTER TABLE public.casa_vendas ADD COLUMN IF NOT EXISTS categoria TEXT;
 ALTER TABLE public.casa_vendas ADD COLUMN IF NOT EXISTS subcategoria TEXT;
 ALTER TABLE public.casa_vendas ADD COLUMN IF NOT EXISTS variante_id TEXT;
 ALTER TABLE public.casa_vendas ADD COLUMN IF NOT EXISTS variacao_nome TEXT;
@@ -120,6 +123,9 @@ ALTER TABLE public.casa_vendas ADD COLUMN IF NOT EXISTS estornada BOOLEAN NOT NU
 ALTER TABLE public.casa_vendas ADD COLUMN IF NOT EXISTS estornada_em TIMESTAMPTZ;
 ALTER TABLE public.casa_vendas ADD COLUMN IF NOT EXISTS estorno_operador TEXT;
 ALTER TABLE public.casa_vendas ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+
+-- Para vendas existentes sem pedido_id, atribui o próprio id da venda
+UPDATE public.casa_vendas SET pedido_id = id WHERE pedido_id IS NULL;
 
 -- INVARIANTES: Constraints de Integridade das Vendas
 DO $$
@@ -135,9 +141,36 @@ END $$;
 -- Índices de performance para vendas
 CREATE INDEX IF NOT EXISTS idx_casa_vendas_created_at ON public.casa_vendas(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_casa_vendas_produto_id ON public.casa_vendas(produto_id);
+CREATE INDEX IF NOT EXISTS idx_casa_vendas_pedido_id ON public.casa_vendas(pedido_id);
 CREATE INDEX IF NOT EXISTS idx_casa_vendas_sku ON public.casa_vendas(sku);
 CREATE INDEX IF NOT EXISTS idx_casa_vendas_estornada ON public.casa_vendas(estornada);
 CREATE INDEX IF NOT EXISTS idx_casa_vendas_updated_at ON public.casa_vendas(updated_at);
+
+-- Habilita Realtime e Replica Identity para tabelas críticas
+DO $$
+BEGIN
+  ALTER TABLE public.casa_produtos REPLICA IDENTITY FULL;
+  ALTER TABLE public.casa_vendas REPLICA IDENTITY FULL;
+  ALTER TABLE public.casa_configuracoes REPLICA IDENTITY FULL;
+  ALTER TABLE public.casa_tombstones REPLICA IDENTITY FULL;
+
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.casa_produtos;
+  EXCEPTION WHEN OTHERS THEN NULL;
+  END;
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.casa_vendas;
+  EXCEPTION WHEN OTHERS THEN NULL;
+  END;
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.casa_configuracoes;
+  EXCEPTION WHEN OTHERS THEN NULL;
+  END;
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.casa_tombstones;
+  EXCEPTION WHEN OTHERS THEN NULL;
+  END;
+END $$;
 
 -- Trigger de updated_at para vendas
 DROP TRIGGER IF EXISTS trg_casa_vendas_updated_at ON public.casa_vendas;
@@ -216,7 +249,9 @@ CREATE OR REPLACE FUNCTION public.casa_registrar_venda_transacional(
   p_variante_id TEXT DEFAULT NULL,
   p_variacao_nome TEXT DEFAULT NULL,
   p_variacao_atributos JSONB DEFAULT NULL,
-  p_sku TEXT DEFAULT NULL
+  p_sku TEXT DEFAULT NULL,
+  p_pedido_id UUID DEFAULT NULL,
+  p_categoria TEXT DEFAULT NULL
 ) RETURNS JSONB AS $$
 DECLARE
   v_prod RECORD;
@@ -243,7 +278,7 @@ BEGIN
   END IF;
 
   -- 3. Bloqueio pessimista de linha contra concorrência simultânea (FOR UPDATE)
-  SELECT id, nome, estoque_atual, tem_variacoes, variantes INTO v_prod
+  SELECT id, nome, categoria, estoque_atual, tem_variacoes, variantes INTO v_prod
   FROM public.casa_produtos
   WHERE id = p_produto_id
   FOR UPDATE;
@@ -299,8 +334,10 @@ BEGIN
   -- 6. Inserção do registro oficial de venda
   INSERT INTO public.casa_vendas (
     id,
+    pedido_id,
     produto_id,
     nome_produto,
+    categoria,
     subcategoria,
     variante_id,
     variacao_nome,
@@ -319,8 +356,10 @@ BEGIN
     updated_at
   ) VALUES (
     p_venda_id,
+    COALESCE(p_pedido_id, p_venda_id),
     p_produto_id,
     v_prod.nome,
+    COALESCE(p_categoria, v_prod.categoria),
     p_subcategoria,
     p_variante_id,
     p_variacao_nome,
@@ -496,6 +535,326 @@ BEGIN
     'quantidade_devolvida', v_venda.quantidade,
     'novo_estoque', v_novo_estoque,
     'variante_id', v_venda.variante_id
+  );
+END;
+$$ LANGUAGE plpgsql;
+
+-- ==============================================================================
+-- 8.1. FUNÇÃO RPC TRANSACIONAL: REGISTRO DE VENDA EM CARRINHO (MULTI-ITEM ATÔMICA)
+-- ==============================================================================
+-- Processa a sacola inteira dentro de UMA ÚNICA transação com bloqueio determinístico
+-- ordenado para prevenir deadlocks e garantir consistência absoluta de estoque.
+CREATE OR REPLACE FUNCTION public.casa_registrar_venda_carrinho_transacional(
+  p_operacao_id UUID,
+  p_pedido_id UUID,
+  p_itens JSONB,
+  p_metodo_pagamento TEXT,
+  p_operador TEXT,
+  p_numero_pedido TEXT DEFAULT NULL
+) RETURNS JSONB AS $$
+DECLARE
+  v_prod_id UUID;
+  v_prod RECORD;
+  v_item JSONB;
+  v_qtd INT;
+  v_var_id TEXT;
+  v_elem JSONB;
+  v_achou_variante BOOLEAN;
+  v_estoque_var INT;
+  v_novo_estoque_var INT;
+  v_novas_variantes JSONB;
+  v_novo_estoque INT;
+  v_total_itens INT := 0;
+  v_num_pedido TEXT;
+BEGIN
+  -- 1. Proteção de Idempotência
+  IF EXISTS (SELECT 1 FROM public.casa_operacoes_idempotencia WHERE operacao_id = p_operacao_id) THEN
+    RETURN jsonb_build_object(
+      'sucesso', true,
+      'ja_processado', true,
+      'pedido_id', p_pedido_id,
+      'mensagem', 'Operação de carrinho já processada anteriormente.'
+    );
+  END IF;
+
+  IF p_itens IS NULL OR jsonb_array_length(p_itens) = 0 THEN
+    RAISE EXCEPTION 'A sacola de compras está vazia.';
+  END IF;
+
+  v_num_pedido := COALESCE(p_numero_pedido, '#CS-' || UPPER(SUBSTRING(p_pedido_id::TEXT, 1, 6)));
+
+  -- 2. Bloqueio pessimista determinístico contra deadlocks (ORDER BY id)
+  FOR v_prod_id IN
+    SELECT DISTINCT (item->>'produto_id')::UUID AS pid
+    FROM jsonb_array_elements(p_itens) AS item
+    ORDER BY pid
+  LOOP
+    PERFORM 1 FROM public.casa_produtos WHERE id = v_prod_id FOR UPDATE;
+  END LOOP;
+
+  -- 3. Processa cada item da sacola
+  FOR v_item IN SELECT * FROM jsonb_array_elements(p_itens)
+  LOOP
+    v_prod_id := (v_item->>'produto_id')::UUID;
+    v_qtd := COALESCE((v_item->>'quantidade')::INT, 1);
+    v_var_id := v_item->>'variante_id';
+
+    IF v_qtd <= 0 THEN
+      RAISE EXCEPTION 'Quantidade inválida (% un) no item %', v_qtd, COALESCE(v_item->>'nome_produto', v_prod_id::TEXT);
+    END IF;
+
+    SELECT id, nome, categoria, subcategoria, estoque_atual, tem_variacoes, variantes
+    INTO v_prod
+    FROM public.casa_produtos
+    WHERE id = v_prod_id;
+
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'Produto não encontrado (ID: %)', v_prod_id;
+    END IF;
+
+    -- Validação e baixa por variante ou produto simples
+    IF v_var_id IS NOT NULL AND v_prod.tem_variacoes IS TRUE AND v_prod.variantes IS NOT NULL THEN
+      v_achou_variante := false;
+      v_novas_variantes := '[]'::jsonb;
+
+      FOR v_elem IN SELECT * FROM jsonb_array_elements(v_prod.variantes)
+      LOOP
+        IF (v_elem->>'id') = v_var_id THEN
+          v_achou_variante := true;
+          v_estoque_var := COALESCE((v_elem->>'estoque_atual')::INT, 0);
+          IF v_estoque_var < v_qtd THEN
+            RAISE EXCEPTION 'Estoque insuficiente na variação % do produto %. Disponível: %, Solicitado: %',
+              COALESCE(v_item->>'variacao_nome', v_var_id), v_prod.nome, v_estoque_var, v_qtd;
+          END IF;
+          v_novo_estoque_var := v_estoque_var - v_qtd;
+          v_novas_variantes := v_novas_variantes || jsonb_build_array(jsonb_set(v_elem, '{estoque_atual}', to_jsonb(v_novo_estoque_var)));
+        ELSE
+          v_novas_variantes := v_novas_variantes || jsonb_build_array(v_elem);
+        END IF;
+      END LOOP;
+
+      IF NOT v_achou_variante THEN
+        RAISE EXCEPTION 'Variação não encontrada (ID: %) para o produto %', v_var_id, v_prod.nome;
+      END IF;
+
+      v_novo_estoque := v_prod.estoque_atual - v_qtd;
+      UPDATE public.casa_produtos
+      SET estoque_atual = v_novo_estoque,
+          variantes = v_novas_variantes,
+          updated_at = NOW()
+      WHERE id = v_prod_id;
+    ELSE
+      IF v_prod.estoque_atual < v_qtd THEN
+        RAISE EXCEPTION 'Estoque insuficiente para o produto %. Disponível: %, Solicitado: %',
+          v_prod.nome, v_prod.estoque_atual, v_qtd;
+      END IF;
+
+      v_novo_estoque := v_prod.estoque_atual - v_qtd;
+      UPDATE public.casa_produtos
+      SET estoque_atual = v_novo_estoque,
+          updated_at = NOW()
+      WHERE id = v_prod_id;
+    END IF;
+
+    -- Inserção do item da venda na tabela oficial
+    INSERT INTO public.casa_vendas (
+      id,
+      pedido_id,
+      numero_pedido,
+      produto_id,
+      nome_produto,
+      categoria,
+      subcategoria,
+      variante_id,
+      variacao_nome,
+      variacao_atributos,
+      quantidade,
+      valor_unitario,
+      valor_total,
+      custo_total,
+      lucro_bruto,
+      valor_reserva_30,
+      metodo_pagamento,
+      operador,
+      sku,
+      estornada,
+      created_at,
+      updated_at
+    ) VALUES (
+      COALESCE((v_item->>'id')::UUID, gen_random_uuid()),
+      p_pedido_id,
+      v_num_pedido,
+      v_prod_id,
+      COALESCE(v_item->>'nome_produto', v_prod.nome),
+      COALESCE(v_item->>'categoria', v_prod.categoria),
+      COALESCE(v_item->>'subcategoria', v_prod.subcategoria),
+      v_var_id,
+      v_item->>'variacao_nome',
+      CASE WHEN (v_item->'variacao_atributos') IS NOT NULL AND (v_item->>'variacao_atributos') != '' 
+           THEN v_item->'variacao_atributos' ELSE NULL END,
+      v_qtd,
+      COALESCE((v_item->>'valor_unitario')::NUMERIC, 0),
+      COALESCE((v_item->>'valor_total')::NUMERIC, 0),
+      COALESCE((v_item->>'custo_total')::NUMERIC, 0),
+      COALESCE((v_item->>'lucro_bruto')::NUMERIC, 0),
+      COALESCE((v_item->>'valor_reserva_30')::NUMERIC, 0),
+      p_metodo_pagamento,
+      p_operador,
+      v_item->>'sku',
+      false,
+      NOW(),
+      NOW()
+    );
+
+    v_total_itens := v_total_itens + 1;
+  END LOOP;
+
+  -- 4. Registro de Idempotência
+  INSERT INTO public.casa_operacoes_idempotencia (
+    operacao_id,
+    tipo,
+    entidade,
+    registro_id,
+    detalhes
+  ) VALUES (
+    p_operacao_id,
+    'VENDA_CARRINHO',
+    'casa_vendas',
+    p_pedido_id,
+    jsonb_build_object('total_itens', v_total_itens, 'operador', p_operador)
+  );
+
+  RETURN jsonb_build_object(
+    'sucesso', true,
+    'pedido_id', p_pedido_id,
+    'numero_pedido', v_num_pedido,
+    'total_itens', v_total_itens,
+    'mensagem', 'Venda multi-item concluída com sucesso.'
+  );
+END;
+$$ LANGUAGE plpgsql;
+
+-- ==============================================================================
+-- 8.2. FUNÇÃO RPC TRANSACIONAL: ESTORNO INTEGRAL DE PEDIDO / CARRINHO
+-- ==============================================================================
+CREATE OR REPLACE FUNCTION public.casa_estornar_venda_carrinho_transacional(
+  p_operacao_id UUID,
+  p_pedido_id UUID,
+  p_operador TEXT
+) RETURNS JSONB AS $$
+DECLARE
+  v_venda RECORD;
+  v_prod RECORD;
+  v_elem JSONB;
+  v_novas_variantes JSONB;
+  v_achou_variante BOOLEAN;
+  v_itens_estornados INT := 0;
+  v_prod_id UUID;
+BEGIN
+  -- 1. Idempotência
+  IF EXISTS (SELECT 1 FROM public.casa_operacoes_idempotencia WHERE operacao_id = p_operacao_id) THEN
+    RETURN jsonb_build_object(
+      'sucesso', true,
+      'ja_processado', true,
+      'pedido_id', p_pedido_id,
+      'mensagem', 'Estorno do carrinho já processado anteriormente.'
+    );
+  END IF;
+
+  -- 2. Bloqueio pessimista determinístico dos produtos envolvidos no pedido
+  FOR v_prod_id IN
+    SELECT DISTINCT produto_id
+    FROM public.casa_vendas
+    WHERE (pedido_id = p_pedido_id OR id = p_pedido_id) AND estornada = false AND produto_id IS NOT NULL
+    ORDER BY produto_id
+  LOOP
+    PERFORM 1 FROM public.casa_produtos WHERE id = v_prod_id FOR UPDATE;
+  END LOOP;
+
+  -- 3. Restauração de estoque para cada item ativo do pedido
+  FOR v_venda IN
+    SELECT id, produto_id, variante_id, quantidade, nome_produto
+    FROM public.casa_vendas
+    WHERE (pedido_id = p_pedido_id OR id = p_pedido_id) AND estornada = false
+    FOR UPDATE
+  LOOP
+    IF v_venda.produto_id IS NOT NULL THEN
+      SELECT id, nome, estoque_atual, tem_variacoes, variantes
+      INTO v_prod
+      FROM public.casa_produtos
+      WHERE id = v_venda.produto_id;
+
+      IF FOUND THEN
+        IF v_venda.variante_id IS NOT NULL AND v_prod.tem_variacoes IS TRUE AND v_prod.variantes IS NOT NULL THEN
+          v_achou_variante := false;
+          v_novas_variantes := '[]'::jsonb;
+
+          FOR v_elem IN SELECT * FROM jsonb_array_elements(v_prod.variantes)
+          LOOP
+            IF (v_elem->>'id') = v_venda.variante_id THEN
+              v_achou_variante := true;
+              v_novas_variantes := v_novas_variantes || jsonb_build_array(
+                jsonb_set(v_elem, '{estoque_atual}', to_jsonb(COALESCE((v_elem->>'estoque_atual')::INT, 0) + v_venda.quantidade))
+              );
+            ELSE
+              v_novas_variantes := v_novas_variantes || jsonb_build_array(v_elem);
+            END IF;
+          END LOOP;
+
+          UPDATE public.casa_produtos
+          SET estoque_atual = estoque_atual + v_venda.quantidade,
+              variantes = CASE WHEN v_achou_variante THEN v_novas_variantes ELSE variantes END,
+              updated_at = NOW()
+          WHERE id = v_venda.produto_id;
+        ELSE
+          UPDATE public.casa_produtos
+          SET estoque_atual = estoque_atual + v_venda.quantidade,
+              updated_at = NOW()
+          WHERE id = v_venda.produto_id;
+        END IF;
+      END IF;
+    END IF;
+
+    -- Marca o item individual como estornado
+    UPDATE public.casa_vendas
+    SET estornada = true,
+        estornada_em = NOW(),
+        estorno_operador = COALESCE(p_operador, 'Operador'),
+        updated_at = NOW()
+    WHERE id = v_venda.id;
+
+    v_itens_estornados := v_itens_estornados + 1;
+  END LOOP;
+
+  IF v_itens_estornados = 0 THEN
+    RETURN jsonb_build_object(
+      'sucesso', true,
+      'ja_estornado', true,
+      'pedido_id', p_pedido_id,
+      'mensagem', 'Todas as vendas deste pedido já haviam sido estornadas.'
+    );
+  END IF;
+
+  -- 4. Registro de Idempotência
+  INSERT INTO public.casa_operacoes_idempotencia (
+    operacao_id,
+    tipo,
+    entidade,
+    registro_id,
+    detalhes
+  ) VALUES (
+    p_operacao_id,
+    'ESTORNO_CARRINHO',
+    'casa_vendas',
+    p_pedido_id,
+    jsonb_build_object('itens_estornados', v_itens_estornados, 'operador', p_operador)
+  );
+
+  RETURN jsonb_build_object(
+    'sucesso', true,
+    'pedido_id', p_pedido_id,
+    'itens_estornados', v_itens_estornados,
+    'mensagem', 'Pedido estornado com sucesso e estoques restaurados.'
   );
 END;
 $$ LANGUAGE plpgsql;

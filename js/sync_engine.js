@@ -223,6 +223,31 @@ export async function processarOutbox() {
           const { error: errDel } = await state.supabase.from('casa_produtos').delete().eq('id', job.id);
           sucesso = !errDel;
         }
+// Helper para higienizar payload de venda conforme colunas reais existentes no Supabase
+function sanitizarPayloadVendaParaBanco(v) {
+  return {
+    id: v.id,
+    produto_id: v.produto_id || null,
+    nome_produto: v.nome_produto || v.nome || 'Produto',
+    quantidade: parseInt(v.quantidade, 10) || 1,
+    valor_unitario: Number(v.valor_unitario) || 0,
+    valor_total: Number(v.valor_total) || 0,
+    custo_total: Number(v.custo_total) || 0,
+    lucro_bruto: Number(v.lucro_bruto) || 0,
+    valor_reserva_30: Number(v.valor_reserva_30) || 0,
+    metodo_pagamento: v.metodo_pagamento || 'Pix',
+    operador: v.operador || 'Operador',
+    subcategoria: v.subcategoria || null,
+    variante_id: v.variante_id || null,
+    variacao_nome: v.variacao_nome || null,
+    variacao_atributos: v.variacao_atributos || null,
+    sku: v.sku || null,
+    estornada: v.estornada === true,
+    created_at: v.created_at || new Date().toISOString(),
+    updated_at: v.updated_at || new Date().toISOString()
+  };
+}
+
       } else if (job.tipo === 'VENDA_TRANSACIONAL') {
         // VENDA ATÔMICA COM RPC TRANSACIONAL E LOCK FOR UPDATE (SUPORTA VARIANTES E SKU)
         const v = job.dados;
@@ -248,7 +273,7 @@ export async function processarOutbox() {
         let { data, error } = await state.supabase.rpc('casa_registrar_venda_transacional', rpcParams);
 
         // Se der erro de assinatura não encontrada (PGRST202), tenta chamada legada
-        if (error && error.code === 'PGRST202') {
+        if (error && (error.code === 'PGRST202' || error.message?.includes('casa_registrar_venda_transacional'))) {
           const legacyParams = {
             p_operacao_id: job.operation_id,
             p_venda_id: v.id,
@@ -266,16 +291,17 @@ export async function processarOutbox() {
           if (!retryRes.error && retryRes.data?.sucesso) {
             data = retryRes.data;
             error = null;
-          } else if (retryRes.error && retryRes.error.code === 'PGRST202') {
-            const { error: errFallback } = await state.supabase.from('casa_vendas').insert([v]);
+          } else {
+            const sanitized = sanitizarPayloadVendaParaBanco(v);
+            const { error: errFallback } = await state.supabase.from('casa_vendas').insert([sanitized]);
             sucesso = !errFallback;
             if (sucesso) error = null;
           }
         }
 
-        if (!error && data?.sucesso) {
+        if (!error && (sucesso || data?.sucesso)) {
           sucesso = true;
-          logSync('OUTBOX', `Venda transacional ${v.id} aceita pelo banco. Novo estoque: ${data.novo_estoque}`);
+          logSync('OUTBOX', `Venda transacional ${v.id} aceita pelo banco. Novo estoque: ${data?.novo_estoque}`);
         } else {
           logSync('ERROR', `Erro na venda transacional ${v.id}:`, error || data);
           // Se o erro foi estoque insuficiente no servidor
@@ -287,6 +313,114 @@ export async function processarOutbox() {
             removerMutacaoDaFila(job.jobId);
             houveAlteracao = true;
             continue;
+          }
+        }
+      } else if (job.tipo === 'VENDA_CARRINHO_TRANSACIONAL') {
+        // VENDA MULTI-ITEM EM SACOLA / CARRINHO (ATÔMICA COM LOCK DETERMINÍSTICO)
+        const pedido = job.dados;
+        const rpcParams = {
+          p_operacao_id: job.operation_id,
+          p_pedido_id: pedido.pedido_id,
+          p_itens: pedido.itens,
+          p_metodo_pagamento: pedido.metodo_pagamento || 'Pix',
+          p_operador: pedido.operador || 'Operador',
+          p_numero_pedido: pedido.numero_pedido || null
+        };
+
+        let { data, error } = await state.supabase.rpc('casa_registrar_venda_carrinho_transacional', rpcParams);
+
+        if (error && (error.code === 'PGRST202' || error.message?.includes('casa_registrar_venda_carrinho_transacional'))) {
+          // Fallback resiliente: processa cada item individualmente via RPC atômica existente casa_registrar_venda_transacional
+          logSync('WARN', 'RPC casa_registrar_venda_carrinho_transacional ausente. Executando fallback individual atômico...');
+          let todosItensProcessados = true;
+          const itensParaInserirDireto = [];
+
+          for (const it of (pedido.itens || [])) {
+            const itemId = it.id || it.venda_id || crypto.randomUUID();
+            const itemRpcParams = {
+              p_operacao_id: crypto.randomUUID(),
+              p_venda_id: itemId,
+              p_produto_id: it.produto_id,
+              p_qtd: it.quantidade,
+              p_metodo_pagamento: pedido.metodo_pagamento || 'Pix',
+              p_operador: pedido.operador || 'Operador',
+              p_valor_unitario: it.valor_unitario,
+              p_valor_total: it.valor_total,
+              p_custo_total: it.custo_total,
+              p_lucro_bruto: it.lucro_bruto,
+              p_valor_reserva_30: it.valor_reserva_30,
+              p_subcategoria: it.subcategoria || null,
+              p_variante_id: it.variante_id || null,
+              p_variacao_nome: it.variacao_nome || null,
+              p_variacao_atributos: it.variacao_atributos || null,
+              p_sku: it.sku || null
+            };
+
+            const itemRes = await state.supabase.rpc('casa_registrar_venda_transacional', itemRpcParams);
+            if (itemRes.error || !itemRes.data?.sucesso) {
+              todosItensProcessados = false;
+              itensParaInserirDireto.push(sanitizarPayloadVendaParaBanco({
+                ...it,
+                id: itemId,
+                metodo_pagamento: pedido.metodo_pagamento,
+                operador: pedido.operador
+              }));
+            }
+          }
+
+          if (todosItensProcessados) {
+            sucesso = true;
+            error = null;
+          } else if (itensParaInserirDireto.length > 0) {
+            const { error: errInsert } = await state.supabase.from('casa_vendas').insert(itensParaInserirDireto);
+            sucesso = !errInsert;
+            if (sucesso) error = null;
+          }
+        }
+
+        if (!error && (sucesso || data?.sucesso)) {
+          sucesso = true;
+          logSync('OUTBOX', `Pedido ${pedido.pedido_id} (${pedido.itens?.length} itens) registrado com sucesso no banco.`);
+        } else {
+          logSync('ERROR', `Erro ao registrar carrinho ${pedido.pedido_id}:`, error || data);
+          if (error && error.message && error.message.includes('Estoque insuficiente')) {
+            job.status = 'falha_definitiva';
+            job.ultimo_erro = error.message;
+            removerMutacaoDaFila(job.jobId);
+            houveAlteracao = true;
+            continue;
+          }
+        }
+      } else if (job.tipo === 'ESTORNO_CARRINHO_TRANSACIONAL') {
+        // ESTORNO ATÔMICO DE PEDIDO COMPLETO
+        const { data, error } = await state.supabase.rpc('casa_estornar_venda_carrinho_transacional', {
+          p_operacao_id: job.operation_id,
+          p_pedido_id: job.dados?.pedido_id || job.id,
+          p_operador: job.dados?.operador || state.operador || 'Operador'
+        });
+
+        if (!error && data?.sucesso) {
+          sucesso = true;
+          logSync('OUTBOX', `Estorno do pedido ${job.dados?.pedido_id || job.id} concluído no banco.`);
+        } else {
+          logSync('ERROR', `Erro no estorno do pedido ${job.id}:`, error || data);
+          if (error && (error.code === 'PGRST202' || error.message?.includes('casa_estornar_venda_carrinho_transacional'))) {
+            // Fallback resiliente: marca estornada = true em todas as linhas dos itens pertencentes ao pedido
+            const itemIds = (job.dados?.itens || []).map(it => it.venda_id || it.id).filter(Boolean);
+            if (itemIds.length > 0) {
+              const { error: errUpd } = await state.supabase
+                .from('casa_vendas')
+                .update({ estornada: true, estornada_em: new Date().toISOString(), estorno_operador: job.dados?.operador || 'Operador' })
+                .in('id', itemIds);
+              sucesso = !errUpd;
+            } else {
+              const pid = job.dados?.pedido_id || job.id;
+              const { error: errUpd } = await state.supabase
+                .from('casa_vendas')
+                .update({ estornada: true, estornada_em: new Date().toISOString(), estorno_operador: job.dados?.operador || 'Operador' })
+                .eq('id', pid);
+              sucesso = !errUpd;
+            }
           }
         }
       } else if (job.tipo === 'ESTORNO_TRANSACIONAL') {
@@ -490,12 +624,29 @@ export async function reconciliarComServidor() {
       // Vendas ativas no servidor (descarta estornadas)
       const vendasAtivasRemotas = salesRemotas.filter(s => s.estornada !== true);
 
-      // Vendas locais criadas offline ainda não confirmadas
-      const pendenciasVendas = state.syncQueue.filter(j => j.tipo === 'VENDA_TRANSACIONAL');
-      const idsVendasPendentes = new Set(pendenciasVendas.map(j => j.id));
+      // Vendas locais criadas offline ainda não confirmadas (venda simples ou carrinho)
+      const pendenciasVendas = state.syncQueue.filter(j => j.tipo === 'VENDA_TRANSACIONAL' || j.tipo === 'VENDA_CARRINHO_TRANSACIONAL');
+      const idsVendasPendentes = new Set();
+      pendenciasVendas.forEach(j => {
+        if (j.tipo === 'VENDA_TRANSACIONAL') {
+          idsVendasPendentes.add(j.id);
+        } else if (j.tipo === 'VENDA_CARRINHO_TRANSACIONAL' && Array.isArray(j.dados?.itens)) {
+          j.dados.itens.forEach(it => {
+            if (it.id) idsVendasPendentes.add(it.id);
+            if (it.venda_id) idsVendasPendentes.add(it.venda_id);
+          });
+        }
+      });
       const vendasCriadasOffline = state.vendas.filter(v => !mapaVendasRemotas.has(v.id) && idsVendasPendentes.has(v.id));
 
-      state.vendas = [...vendasCriadasOffline, ...vendasAtivasRemotas];
+      // Garante pedido_id em todas as vendas convergidas
+      const vendasNormalizadas = [...vendasCriadasOffline, ...vendasAtivasRemotas].map(v => ({
+        ...v,
+        pedido_id: v.pedido_id || v.id,
+        numero_pedido: v.numero_pedido || ('#CS-' + (v.pedido_id ? v.pedido_id.substring(0, 6).toUpperCase() : '0000'))
+      }));
+
+      state.vendas = vendasNormalizadas;
       state.vendas.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
       salvarLocal();
       logSync('RECONCILE', `Vendas convergidas: ${state.vendas.length} no histórico.`);

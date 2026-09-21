@@ -1,4 +1,4 @@
-const APP_VERSION = '23.4';
+const APP_VERSION = '24.1';
 const CACHE_NAME = `casa-sagrado-v${APP_VERSION}`;
 const ASSETS_TO_CACHE = [
   './',

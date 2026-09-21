@@ -1,13 +1,13 @@
 # Casa do Sagrado — Regras de Projeto, Arquitetura e Aprendizados da IA
-**Versão Atual Estável:** `v22.0` (Arquitetura Comercial Transacional, Outbox Idempotente, Multi-Tier Storage e Multi-Dispositivo Resiliente)  
-**Data de Consolidação:** 20 de Setembro de 2026  
+**Versão Atual Estável:** `v24.0` (Sacola / Carrinho Multi-Item Transacional, Convergência de Vendas entre Terminais, Refinamento Mobile-First e Regra Permanente de Deploy)  
+**Data de Consolidação:** 21 de Setembro de 2026  
 
 Este documento define as diretrizes técnicas, regras de arquitetura, padrões visuais e lições aprendidas consolidadas no desenvolvimento do sistema **Casa do Sagrado**. Todo assistente ou agente operando neste repositório DEVE seguir estas regras rigorosamente para evitar regressões.
 
 ---
 
 ## 1. Identidade e Filosofia do Projeto
-- **Sistema:** Gestão Comercial, Ponto de Venda (PDV), Fundo de Reserva, Ponto de Equilíbrio Operacional, Markup Divisor, Curva ABC e Inteligência Comercial para Loja de Artigos Religiosos.
+- **Sistema:** Gestão Comercial, Ponto de Venda (PDV), Sacola Multi-Item, Fundo de Reserva, Ponto de Equilíbrio Operacional, Markup Divisor, Curva ABC e Inteligência Comercial para Loja de Artigos Religiosos.
 - **Padrão Arquitetural:** PWA Local-First com Sincronização Supabase (PostgreSQL). O sistema opera com latência zero no dispositivo e sincroniza de forma transacional e atômica com o servidor compartilhado.
 - **Identidade Visual:** Dark Mode Corporativo/ERP Sagrado (`#0b0f17` fundo, `#161f2e` superfícies, `#f59e0b` ouro, `#10b981` verde, `#ef4444` vermelho, `#38bdf8` azul).
 - **Sem Emojis:** Utilizar estritamente ícones vetoriais da biblioteca Lucide Icons (`<i data-lucide="..."></i>`).
@@ -26,12 +26,12 @@ Este documento define as diretrizes técnicas, regras de arquitetura, padrões v
 - Apenas itens explicitamente registrados na `syncQueue` com status pendente devem ser enviados como novas criações. Itens ausentes na nuvem que não estão na Outbox local foram deletados remotamente e devem ser expurgados localmente.
 
 ### Regra 3: Idempotência Obrigatória para Mutações Críticas (`operation_id`)
-- Toda operação que afeta estoque ou finanças (`VENDA_TRANSACIONAL`, `ESTORNO_TRANSACIONAL`, `PRODUTO_DELETE`) deve carregar um `operation_id = crypto.randomUUID()` imutável.
+- Toda operação que afeta estoque ou finanças (`VENDA_TRANSACIONAL`, `VENDA_CARRINHO_TRANSACIONAL`, `ESTORNO_CARRINHO_TRANSACIONAL`, `ESTORNO_TRANSACIONAL`, `PRODUTO_DELETE`) deve carregar um `operation_id = crypto.randomUUID()` imutável.
 - O PostgreSQL deve verificar o `operation_id` na tabela `casa_operacoes_idempotencia` antes de aplicar qualquer alteração física para impedir efeitos cumulativos em retries de rede.
 
 ### Regra 4: Atomicidade no Banco via RPC e Bloqueio Pessimista (`FOR UPDATE`)
-- Vendas e estornos DEVEM ser executados no Supabase via PostgreSQL Functions / RPCs (`casa_registrar_venda_transacional` e `casa_estornar_venda_transacional`).
-- Toda leitura concorrente de saldo de estoque para venda deve utilizar `SELECT ... FOR UPDATE` para impedir que dois aparelhos vendam o último item simultaneamente. O estoque nunca pode ser negativo (`CHECK (estoque_atual >= 0)`).
+- Vendas e estornos DEVEM ser executados no Supabase via PostgreSQL Functions / RPCs (`casa_registrar_venda_carrinho_transacional`, `casa_estornar_venda_carrinho_transacional`, `casa_registrar_venda_transacional`).
+- Toda leitura concorrente de saldo de estoque para venda deve utilizar `SELECT ... FOR UPDATE` ordenado deterministicamente (`ORDER BY id`) para impedir deadlock quando múltiplos terminais vendem múltiplos produtos em paralelo. O estoque nunca pode ser negativo (`CHECK (estoque_atual >= 0)`). Se algum item não tiver saldo suficiente, ocorre rollback total da transação.
 
 ### Regra 5: Soft-Delete Obrigatório para Estornos de Vendas
 - Vendas NUNCA devem ser excluídas com `DELETE` físico direto no banco de dados.
@@ -42,7 +42,7 @@ Este documento define as diretrizes técnicas, regras de arquitetura, padrões v
 - Dispositivos que retomam de períodos prolongados de suspensão devem consultar os tombstones remotos antes de reconciliar o catálogo para expurgar itens locais sem ressuscitá-los.
 
 ### Regra 7: Armazenamento Multi-Tier (IndexedDB para Imagens, LocalStorage Leve)
-- O `localStorage` deve ser reservado exclusivamente para dados leves (metadados, configurações, identificadores).
+- O `localStorage` deve ser reservado exclusivamente para dados leves (metadados, configurações, identificadores, sacola temporária).
 - Fotografias de produtos devem ser armazenadas localmente no **IndexedDB** (`casa_sagrado_db.imagens`) e remotamente no **Supabase Storage** (`casa-produtos`), nunca como strings Base64 brutas no `localStorage`, prevenindo erros de cota (`QuotaExceededError`) no Safari do iPhone.
 
 ### Regra 8: Blindagem do Supabase (Nunca usar `.catch` em Builders)
@@ -55,6 +55,26 @@ Este documento define as diretrizes técnicas, regras de arquitetura, padrões v
 
 ### Regra 10: Identificadores Estritamente em UUID v4
 - Toda entidade sincronizada (`casa_produtos`, `casa_vendas`, `casa_tombstones`, `casa_operacoes_idempotencia`) DEVE utilizar UUID v4 gerado via `crypto.randomUUID()`. Identificadores textuais legados causam erro de sintaxe Postgres (`22P02`).
+
+### Regra 11: REGRA INVIOLÁVEL DE ENTREGA (Commit + Push + Verificação de Deploy)
+- **NENHUMA tarefa que altere código poderá ser considerada concluída apenas porque o código foi editado, salvo ou funcionou no ambiente local.**
+- O ciclo completo obrigatório é:
+  `ALTERAR -> TESTAR -> REVISAR GIT STATUS/DIFF -> COMMIT -> PUSH -> CONFIRMAR COMMIT REMOTO -> CONFIRMAR DEPLOY -> TESTAR BUILD PUBLICADO`.
+- Causa raiz de divergências passadas: *"Alterações implementadas localmente não haviam sido publicadas no repositório remoto. Sem commit e push, o deploy permaneceu servindo a versão anterior, fazendo o sistema de atualização aparentar falha."*
+- Antes de commitar: não incluir secrets, arquivos temporários ou chaves de serviço.
+- Ao reportar a conclusão, obrigatoriamente fornecer: Commit Hash, Branch, Status do Push, Status do Deploy, Versão e Lista de Arquivos.
+
+### Regra 12: Modelo de Dados de Sacola Multi-Item Transacional (`v24.0`)
+- Uma compra de múltiplos produtos pelo mesmo cliente constitui **UMA Transação**, contendo múltiplas **Linhas de Itens**, somando um número total de **Unidades**.
+- Todas as linhas geradas compartilham o mesmo `pedido_id UUID` e `numero_pedido TEXT` (ex: `#CS-1048`).
+- **Ticket Médio** é calculado por transação finalizada: `Faturamento Total / Total de Transações (pedidos distintos)`.
+- Ranking e Curva ABC utilizam as unidades físicas e faturamento por linha de item.
+- Na base de dados para Inteligência (Google Sheets), a aba `Vendas` registra 1 linha por transação (`pedido_id`), e a aba `Itens_Venda` registra 1 linha por item individual.
+
+### Regra 13: Diretrizes Mobile-First e Prevenção de Auto-Zoom no iOS Safari
+- Todos os inputs de texto, número e formulários DEVEM possuir `font-size: 16px` no mobile para impedir que o iOS Safari aplique zoom automático destrutivo na tela ao focar.
+- Todos os botões e áreas de toque tácteis (ex: exclusão de tags de variação, incremento em esteiras, botões de foto) devem possuir área mínima de toque de **44x44px**.
+- Formulários com múltiplas seções devem adotar **acordeons verticais recolhíveis** para garantir legibilidade e conforto em telas estreitas (320px a 430px).
 
 ---
 

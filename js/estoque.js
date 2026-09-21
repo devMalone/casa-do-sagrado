@@ -570,8 +570,8 @@ function renderizarConstrutorVariacoesUI() {
         <div class="combination-item" data-comb-idx="${idx}">
           <div class="combination-main-row">
             <div class="combination-tag-name">
-              <span>${item.nome_combinacao.replace(/\s\/\s/g, ' • ')}</span>
-              ${item.sku ? `<span style="font-size: 10px; font-family: monospace; color: var(--text-muted); margin-left: 6px; background: rgba(255,255,255,0.06); padding: 1px 5px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.08);">SKU: ${item.sku}</span>` : ''}
+              <span class="combination-name-label">${item.nome_combinacao.replace(/\s\/\s/g, ' • ')}</span>
+              ${item.sku ? `<span class="combination-sku-tag">SKU: ${item.sku}</span>` : ''}
             </div>
             <div class="combination-stock-field">
               <label>Estoque:</label>

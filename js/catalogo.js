@@ -496,8 +496,8 @@ export function renderizarCatalogo() {
       : '';
 
     const varIndicatorHtml = p.tem_variacoes
-      ? `<span style="font-size: 10px; color: var(--accent); font-weight: 600; display: inline-flex; align-items: center; gap: 3px;">
-           <i data-lucide="layers" style="width: 11px; height: 11px;"></i> ${p.variantes?.length || 0} variações
+      ? `<span class="catalog-var-pill">
+           <i data-lucide="layers" style="width: 10px; height: 10px;"></i> ${p.variantes?.length || 0} ${p.variantes?.length === 1 ? 'variação' : 'variações'}
          </span>`
       : '';
 
@@ -508,7 +508,7 @@ export function renderizarCatalogo() {
       </div>
       <div class="catalog-info">
         <div class="catalog-title" title="${p.nome}">${p.nome}</div>
-        <div style="display: flex; align-items: center; gap: 6px; margin: 2px 0;">
+        <div class="catalog-meta-row">
           ${subBadgeHtml}
           ${varIndicatorHtml}
         </div>

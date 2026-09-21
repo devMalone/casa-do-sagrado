@@ -1,6 +1,6 @@
 {
-  "version": "23.4",
-  "build_id": "20260921-001500",
-  "published_at": "2026-09-21T00:15:00Z",
-  "min_compatible_db_schema": 23
+  "version": "24.1",
+  "build_id": "20260921-073000",
+  "published_at": "2026-09-21T07:30:00Z",
+  "min_compatible_db_schema": 24
 }

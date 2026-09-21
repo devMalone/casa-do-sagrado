@@ -12,27 +12,35 @@ export function renderizarDashboard() {
   let totalUnidades = 0;
   const operadoresCount = {};
 
-  const hojeStr = new Date().toISOString().split('T')[0];
+  const vendasAtivas = state.vendas.filter(v => !v.estornada);
+  const hojeStrLocal = new Date().toLocaleDateString('pt-BR');
 
-  state.vendas.forEach(v => {
-    faturamento += v.valor_total;
-    custo += v.custo_total;
-    lucro += v.lucro_bruto;
-    reservaAcumulada += v.valor_reserva_30;
-    totalUnidades += (v.quantidade || 1);
+  vendasAtivas.forEach(v => {
+    faturamento += (Number(v.valor_total) || 0);
+    custo += (Number(v.custo_total) || 0);
+    lucro += (Number(v.lucro_bruto) || 0);
+    reservaAcumulada += (Number(v.valor_reserva_30) || 0);
+    totalUnidades += (parseInt(v.quantidade, 10) || 1);
 
-    if (v.created_at && v.created_at.startsWith(hojeStr)) {
-      hojeReserva += v.valor_reserva_30;
-      hojeLucro += v.lucro_bruto;
+    if (v.created_at) {
+      const dataVendaLocal = new Date(v.created_at).toLocaleDateString('pt-BR');
+      if (dataVendaLocal === hojeStrLocal) {
+        hojeReserva += (Number(v.valor_reserva_30) || 0);
+        hojeLucro += (Number(v.lucro_bruto) || 0);
+      }
     }
 
     const op = v.operador || 'Não identificado';
     operadoresCount[op] = (operadoresCount[op] || 0) + 1;
   });
 
-  const totalVendas = state.vendas.length;
-  const ticketMedio = totalVendas > 0 ? (faturamento / totalVendas) : 0;
-  const upv = totalVendas > 0 ? (totalUnidades / totalVendas) : 0;
+  // Distinção analítica: Transações de clientes vs Linhas de itens vs Unidades físicas
+  const transacoesSet = new Set(vendasAtivas.map(v => v.pedido_id || v.id));
+  const totalTransacoes = transacoesSet.size;
+  const totalLinhasItens = vendasAtivas.length;
+
+  const ticketMedio = totalTransacoes > 0 ? (faturamento / totalTransacoes) : 0;
+  const upv = totalTransacoes > 0 ? (totalUnidades / totalTransacoes) : 0;
 
   // Atualização dos KPIs Básicos
   const kpiFat = document.getElementById('kpiFaturamento');

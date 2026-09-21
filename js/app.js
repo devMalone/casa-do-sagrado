@@ -8,7 +8,19 @@ import { APP_VERSION, BUILD_ID, DB_SCHEMA_VERSION, CACHE_NAME } from './version.
 import { renderizarCategoriasUI, adicionarCategoria, abrirModalCategorias, setOnCategoriaAlteradaCallback } from './categorias.js';
 import { renderizarEstoque, filtrarProdutos, abrirModalProduto, salvarProduto, setOnQuickSellCallback, excluirProdutoAtual, setOnProdutoAlteradoCallback, configurarEventosFotoProduto } from './estoque.js';
 import { renderizarCatalogo, configurarEventosCatalogo, setOnCatalogQuickSellCallback } from './catalogo.js';
-import { iniciarVendaRapida, ajustarQtdVenda, selecionarMetodoPgto, confirmarVendaFinal, renderizarHistoricoVendas, setOnVendaRealizadaCallback, limparTodoHistoricoVendas, configurarEventosSelecaoVariacao } from './vendas.js';
+import {
+  iniciarVendaRapida,
+  ajustarQtdVenda,
+  selecionarMetodoPgto,
+  confirmarVendaFinal,
+  renderizarHistoricoVendas,
+  setOnVendaRealizadaCallback,
+  limparTodoHistoricoVendas,
+  configurarEventosSelecaoVariacao,
+  atualizarBadgeSacola,
+  abrirModalSacola,
+  finalizarVendaSacola
+} from './vendas.js';
 import { renderizarDashboard, abrirModalConfigReserva, salvarConfigReserva, abrirModalConfigEquilibrio, adicionarItemCustoFixo, atualizarDiasUteisMes } from './dashboard.js';
 import { recalcularMarkup, copiarPrecoParaNovoProduto } from './markup.js';
 import { renderizarCurvaABC, alternarSubAbaFerramentas } from './curva_abc.js';
@@ -171,6 +183,7 @@ function renderizarTudo() {
   renderizarDashboard();
   renderizarHistoricoVendas();
   renderizarCurvaABC();
+  atualizarBadgeSacola();
   refreshIcons();
 }
 
@@ -243,6 +256,7 @@ function mudarAba(abaId, btn) {
     renderizarCurvaABC();
     recalcularMarkup();
   }
+  atualizarBadgeSacola();
   refreshIcons();
 }
 
@@ -342,6 +356,28 @@ function vincularEventosGlobais() {
   document.querySelectorAll('.payment-methods .pay-btn').forEach(btn => {
     btn.addEventListener('click', function() {
       selecionarMetodoPgto(this.getAttribute('data-method'), this);
+    });
+  });
+
+  // Sacola / Carrinho de Compras
+  document.getElementById('btnSacolaTop')?.addEventListener('click', abrirModalSacola);
+  document.getElementById('barSacolaFlutuante')?.addEventListener('click', abrirModalSacola);
+  document.getElementById('btnAbrirSacolaFlutuante')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    abrirModalSacola();
+  });
+  document.getElementById('btnFecharModalSacola')?.addEventListener('click', fecharModalAtual);
+  document.getElementById('btnContinuarComprandoRodape')?.addEventListener('click', fecharModalAtual);
+  document.getElementById('btnFinalizarVendaSacola')?.addEventListener('click', finalizarVendaSacola);
+
+  // Acordeons do Modal de Produto (Mobile-First)
+  document.querySelectorAll('.prod-accordion-header').forEach(header => {
+    header.addEventListener('click', () => {
+      const card = header.closest('.prod-accordion-card');
+      if (card) {
+        card.classList.toggle('open');
+        refreshIcons();
+      }
     });
   });
 

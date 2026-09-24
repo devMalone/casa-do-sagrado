@@ -1002,7 +1002,10 @@
   border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 8px;
   padding: 6px 10px;
-  gap: 10px;
+  gap: 8px;
+  flex-wrap: wrap;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .var-value-photo-name {
@@ -1012,12 +1015,16 @@
   display: flex;
   align-items: center;
   gap: 6px;
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .var-value-photo-actions {
   display: flex;
   align-items: center;
   gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .var-value-photo-thumb {
@@ -1044,6 +1051,7 @@
   color: var(--text);
   transition: all 0.15s;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .btn-var-photo-action:hover {

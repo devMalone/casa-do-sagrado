@@ -498,7 +498,7 @@ export async function atualizarUIDiagnosticoVersao() {
       if (comp === 0 && (!servidor.build_id || servidor.build_id === BUILD_ID)) {
         elBadge.className = 'badge-status-sheets sucesso';
         elBadge.innerText = 'Atualizado';
-      } else if (comp > 0 || (servidor.build_id && servidor.build_id !== BUILD_ID)) {
+      } else if (comp > 0 || (comp === 0 && servidor.build_id && servidor.build_id !== BUILD_ID)) {
         elBadge.className = 'badge-status-sheets erro';
         elBadge.innerText = 'Atualização disponível';
       } else {

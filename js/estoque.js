@@ -638,7 +638,9 @@ function renderizarConstrutorVariacoesUI() {
         const idx = btn.getAttribute('data-toggle-details');
         const extraBox = document.getElementById(`combExtra_${idx}`);
         if (extraBox) {
-          extraBox.style.display = extraBox.style.display === 'none' ? 'grid' : 'none';
+          const estaOculto = extraBox.style.display === 'none';
+          extraBox.style.display = estaOculto ? 'grid' : 'none';
+          btn.classList.toggle('active', estaOculto);
         }
       });
     });

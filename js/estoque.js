@@ -378,12 +378,11 @@ function renderizarConstrutorVariacoesUI() {
             return `
               <div class="var-value-photo-row">
                 <div class="var-value-photo-name">
-                  <i data-lucide="tag" style="width: 12px; height: 12px; opacity: 0.5;"></i>
+                  ${fotoUrl ? `<img src="${fotoUrl}" class="var-value-photo-thumb" alt="${val}">` : '<i data-lucide="tag" style="width: 12px; height: 12px; opacity: 0.5;"></i>'}
                   <span>${val}</span>
                 </div>
                 <div class="var-value-photo-actions">
                   ${fotoUrl ? `
-                    <img src="${fotoUrl}" class="var-value-photo-thumb" alt="${val}">
                     <button type="button" class="btn-var-photo-action edit" data-edit-val-photo="${varObj.id}" data-val="${val}" title="Reenquadrar foto">
                       <i data-lucide="crop" style="width: 12px; height: 12px;"></i> Editar
                     </button>

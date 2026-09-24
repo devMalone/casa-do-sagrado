@@ -1003,7 +1003,6 @@
   border-radius: 8px;
   padding: 6px 10px;
   gap: 8px;
-  flex-wrap: wrap;
   width: 100%;
   box-sizing: border-box;
 }
@@ -1014,17 +1013,22 @@
   color: var(--text);
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   min-width: 0;
-  flex: 1 1 auto;
+  flex: 1;
+}
+
+.var-value-photo-name span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .var-value-photo-actions {
   display: flex;
   align-items: center;
   gap: 6px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
+  flex-shrink: 0;
 }
 
 .var-value-photo-thumb {

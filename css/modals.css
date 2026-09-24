@@ -551,16 +551,20 @@
   display: flex;
   gap: 6px;
   margin-top: 4px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .variation-val-input {
   flex: 1;
+  min-width: 0;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 6px 10px;
   font-size: 12.5px;
   color: var(--text);
+  box-sizing: border-box;
 }
 
 .btn-add-val {
@@ -574,8 +578,11 @@
   cursor: pointer;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 4px;
   white-space: nowrap;
+  flex-shrink: 0;
+  box-sizing: border-box;
 }
 
 .btn-add-val:hover {

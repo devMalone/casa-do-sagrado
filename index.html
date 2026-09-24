@@ -489,7 +489,7 @@
               <input type="text" id="prodNome" name="item_desc_field" class="form-input" placeholder="Ex: Vela 7 Dias Branca" autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false" data-form-type="other" data-lpignore="true" data-1p-ignore="true">
             </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div class="form-row-2col">
               <div class="form-group">
                 <label class="form-label">Preço de Custo (Unit.)</label>
                 <input type="text" id="prodPrecoCusto" name="item_custo_field" class="form-input" inputmode="numeric" placeholder="R$ 0,00" autocomplete="off" autocorrect="off" spellcheck="false" data-form-type="other" data-lpignore="true">
@@ -522,7 +522,7 @@
           <div class="prod-accordion-body">
             <!-- Categoria Principal com criação rápida inline -->
             <div class="form-group">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <div class="category-header-wrap">
                 <label class="form-label" style="margin-bottom: 0;">Categoria Principal</label>
                 <button type="button" class="btn-inline-add" id="btnNovaCategoriaInline" title="Criar categoria sem sair da tela">
                   <i data-lucide="plus" style="width: 13px; height: 13px;"></i> Nova Categoria
@@ -536,7 +536,7 @@
 
             <!-- Subcategoria Opcional com criação rápida inline -->
             <div class="form-group" id="groupProdSubcategoria">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <div class="category-header-wrap">
                 <label class="form-label" style="margin-bottom: 0;">Subcategoria (Opcional)</label>
                 <button type="button" class="btn-inline-add" id="btnNovaSubcategoriaInline" title="Criar subcategoria vinculada à categoria atual">
                   <i data-lucide="plus" style="width: 13px; height: 13px;"></i> Nova Subcategoria
@@ -642,7 +642,7 @@
             <i data-lucide="chevron-down" class="prod-accordion-arrow"></i>
           </div>
           <div class="prod-accordion-body">
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div class="form-row-2col">
               <div class="form-group">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
                   <label class="form-label" style="margin-bottom: 0;">SKU Comercial</label>

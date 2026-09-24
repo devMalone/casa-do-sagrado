@@ -2166,6 +2166,14 @@
   overflow: hidden;
   margin-bottom: 10px;
   transition: border-color 0.2s ease;
+  flex: 0 0 auto;
+  width: 100%;
+  height: auto;
+  min-height: 48px;
+}
+
+.prod-accordion-card:last-child {
+  margin-bottom: 0;
 }
 
 .prod-accordion-card.open {
@@ -2215,12 +2223,15 @@
   border-top: 1px solid var(--border);
   flex-direction: column;
   gap: 12px;
+  height: auto;
+  min-height: 0;
 }
 
 .prod-accordion-card.open .prod-accordion-body {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  height: auto;
 }
 
 /* ==============================================================================
